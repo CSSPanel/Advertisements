@@ -69,4 +69,4 @@ jobs:
           body: |
             Place the plugin in game/csgo/addons/counterstrikesharp/plugins/Advertisements
             After first launch, u need to configure plugin in  addons/counterstrikesharp/configs/plugins/Advertisements/Advertisements.json
-            Get the latest version of the panel here - github.com/CSSPanel/Panel
+            Get the latest version of the panel here - https://github.com/CSSPanel/Advertisements

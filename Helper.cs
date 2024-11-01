@@ -19,19 +19,20 @@ public partial class AdvertisementsCore
 		// Stop the timer if it's running
 		timer?.Kill();
 
-		int serverId = Config.ServerId;
+		int serverId = ConVars.ServerIdCvar != null && ConVars.ServerIdCvar.Value != 0 ? ConVars.ServerIdCvar.Value : Config.ServerId;
+		Log($"Fetching advertisements for serverId: {serverId}");
 
 		if (g_Db == null)
 		{
-			Console.WriteLine("Database connection is not initialized.");
+			Log("Database connection is not initialized.");
 			return;
 		}
 
-		var results = g_Db.ExecuteQuery($"SELECT * FROM `{Constants.TABLE_NAME}` WHERE serverId = '{serverId}';");
+		var results = g_Db.ExecuteQuery($"SELECT * FROM `{Constants.TABLE_NAME}` WHERE FIND_IN_SET({serverId}, `servers`) OR `servers` IS NULL OR `servers` = ''");
 
 		if (results == null)
 		{
-			Console.WriteLine("Query returned no results.");
+			Log("Query returned no results.");
 			return;
 		}
 
@@ -39,7 +40,7 @@ public partial class AdvertisementsCore
 		{
 			if (pair.Value == null)
 			{
-				Console.WriteLine("Encountered a null value in the results.");
+				Log("Encountered a null value in the results.");
 				continue;
 			}
 
@@ -57,7 +58,7 @@ public partial class AdvertisementsCore
 		}
 
 		// filter the not enabled advertisements
-		Console.WriteLine($"[CSS] Loaded {g_AdvertisementsList.Count()} advertisements (ad * multiply).");
+		Log($"Loaded {g_AdvertisementsList.Count()} advertisements (ad * multiply).");
 		timer = AddTimer(Config.Timer, Timer_Advertisements, TimerFlags.REPEAT);
 	}
 
@@ -68,7 +69,7 @@ public partial class AdvertisementsCore
 
 		if (g_AdvertisementsList == null || g_AdvertisementsList.Count < 1)
 		{
-			Console.WriteLine("No advertisements to display.");
+			Log("No advertisements to display.");
 			return;
 		}
 
@@ -79,9 +80,7 @@ public partial class AdvertisementsCore
 		{
 			if (!ValidClient(player)) continue;
 
-			// Permissions
-			Console.WriteLine($"Checking player {player.PlayerName} permissions ({player.AuthorizedSteamID})");
-			if (!string.IsNullOrEmpty(selectedAd.Flag) && !AdminManager.PlayerHasPermissions(player.AuthorizedSteamID, selectedAd.Flag.Split(','))) continue;
+			if (!string.IsNullOrEmpty(selectedAd.Flag) && !AdminManager.PlayerHasPermissions(player, selectedAd.Flag.Split(','))) continue;
 
 			DisplayAdvertisement(player, selectedAd);
 		}
@@ -92,7 +91,7 @@ public partial class AdvertisementsCore
 		// Ensure both player and advertisement are valid
 		if (player == null || advertisement == null)
 		{
-			Console.WriteLine("Invalid player or advertisement.");
+			Log("Invalid player or advertisement.");
 			return;
 		}
 
@@ -111,7 +110,7 @@ public partial class AdvertisementsCore
 
 			default:
 				// Handle unknown locations, perhaps log an error or ignore
-				Console.WriteLine($"Unknown advertisement location: {advertisement.Location}");
+				Log($"Unknown advertisement location: {advertisement.Location}");
 				break;
 		}
 	}
@@ -164,7 +163,14 @@ public partial class AdvertisementsCore
 			.Replace("{MAXPLAYERS}", Server.MaxPlayers.ToString())
 			.Replace("{IP}", ConVar.Find("ip")!.StringValue)
 			.Replace("{PORT}", ConVar.Find("hostport")!.GetPrimitiveValue<int>().ToString())
-			.Replace("{NEWLINE}", "\u2029");
+			.Replace("\\n", "\u2029")
+			.Replace("\n", "\u2029");
+
 		return ModifyColorValue(message);
+	}
+
+	public static void Log(string message)
+	{
+		Console.WriteLine($"[CSS Advertisements] {message}");
 	}
 }
