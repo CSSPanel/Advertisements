@@ -6,6 +6,7 @@ using System.Reflection;
 using CounterStrikeSharp.API;
 using Nexd.MySQL;
 using CounterStrikeSharp.API.Modules.Admin;
+using System.Text.RegularExpressions;
 
 namespace Advertisements;
 
@@ -172,5 +173,17 @@ public partial class AdvertisementsCore
 	public static void Log(string message)
 	{
 		Console.WriteLine($"[CSS Advertisements] {message}");
+	}
+
+	public static List<CCSPlayerController> GetValidPlayers()
+	{
+		return Utilities.GetPlayers().FindAll(p => p is
+		{ IsValid: true, IsBot: false, Connected: PlayerConnectedState.PlayerConnected });
+	}
+
+	public static bool IsValidSteamId64(string input)
+	{
+		const string pattern = @"^\d{17}$";
+		return Regex.IsMatch(input, pattern);
 	}
 }

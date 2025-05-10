@@ -89,6 +89,37 @@ public partial class AdvertisementsCore
 		// command.ReplyToCommand($"[CSSP] Advertisements reloaded!");
 	}
 
+	[ConsoleCommand("css_fexec")]
+	[CommandHelper(minArgs: 2, usage: "<#userid or name or steamid> <command>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	[RequiresPermissions("@css/root")]
+	public void OnFexecCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var target = command.GetArg(1);
+		var exec = command.GetArg(2);
+
+		List<CCSPlayerController> playersToTarget = GetValidPlayers();
+
+		// Find the player by name, userid or steamid
+		if (target.StartsWith("#"))
+		{
+			playersToTarget = playersToTarget.Where(player => player.UserId.ToString() == target.Replace("#", "")).ToList();
+		}
+		else if (IsValidSteamId64(target))
+		{
+			playersToTarget = playersToTarget.Where(player => player.SteamID.ToString() == target).ToList();
+		}
+		else
+		{
+			playersToTarget = playersToTarget.Where(player => player.PlayerName.ToLower().Contains(target.ToLower())).ToList();
+		}
+
+		playersToTarget.ForEach(player =>
+		{
+			// player.ExecuteClientCommand(exec);
+			player.ExecuteClientCommandFromServer(exec);
+		});
+	}
+
 	// [ConsoleCommand("css_adv_list")]
 	// [ConsoleCommand("css_advertisements_list", "advertisements command")]
 	// [RequiresPermissionsOr("@css/slay", "@adv/list", "@adv/root")]

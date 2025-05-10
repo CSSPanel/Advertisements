@@ -55,3 +55,4 @@ public partial class AdvertisementsCore : BasePlugin, IPluginConfig<Advertisemen
 		Log("Plugin unloaded");
 	}
 }
+
