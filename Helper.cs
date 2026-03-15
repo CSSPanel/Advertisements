@@ -31,8 +31,6 @@ public partial class AdvertisementsCore
 
 		List<int> serverGroups = GetServerGroups();
 
-		Log($"Server groups for serverId {serverId}: {string.Join(", ", serverGroups)}");
-
 		// Global: both servers and groups are unset → show everywhere
 		string globalCondition = "(`servers` IS NULL OR `servers` = '') AND (`groups` IS NULL OR `groups` = '')";
 		// Direct server match
@@ -78,7 +76,6 @@ public partial class AdvertisementsCore
 
 		// filter the not enabled advertisements
 		Log($"Loaded {g_AdvertisementsList.Count()} advertisements (ad * multiply).");
-		Log($"Loaded advertisements: {string.Join(", ", g_AdvertisementsList.Select(ad => ad.Id))}");
 
 		timer = AddTimer(Config.Timer, Timer_Advertisements, TimerFlags.REPEAT);
 	}
