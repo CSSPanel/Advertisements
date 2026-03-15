@@ -39,7 +39,7 @@ public partial class AdvertisementsCore : BasePlugin, IPluginConfig<Advertisemen
 		}
 
 		g_Db = new(Config.DatabaseHost, Config.DatabaseUser, Config.DatabasePassword, Config.DatabaseName, Config.DatabasePort);
-		g_Db.ExecuteNonQueryAsync($"CREATE TABLE IF NOT EXISTS `{Constants.TABLE_NAME}` (`id` INT NOT NULL AUTO_INCREMENT, `text` TEXT NOT NULL, `location` VARCHAR(128) NOT NULL COMMENT 'chat / center', `servers` TEXT COMMENT 'NULL/blank = all', `flags` VARCHAR(512), `multiply` int(12) NOT NULL DEFAULT 1, `enabled` BOOLEAN NOT NULL DEFAULT TRUE, PRIMARY KEY (`id`));");
+		g_Db.ExecuteNonQueryAsync($"CREATE TABLE IF NOT EXISTS `{Constants.TABLE_NAME}` (`id` INT NOT NULL AUTO_INCREMENT, `text` TEXT NOT NULL, `location` VARCHAR(128) NOT NULL COMMENT 'chat / center', `servers` TEXT COMMENT 'NULL/blank = all DEFAULT NULL', `group` TEXT, `flags` VARCHAR(512), `multiply` int(12) NOT NULL DEFAULT 1, `enabled` BOOLEAN NOT NULL DEFAULT TRUE, PRIMARY KEY (`id`));");
 
 		FetchAdvertisements();
 

@@ -29,7 +29,24 @@ public partial class AdvertisementsCore
 			return;
 		}
 
-		var results = g_Db.ExecuteQuery($"SELECT * FROM `{Constants.TABLE_NAME}` WHERE FIND_IN_SET({serverId}, `servers`) OR `servers` IS NULL OR `servers` = ''");
+		List<int> serverGroups = GetServerGroups();
+
+		Log($"Server groups for serverId {serverId}: {string.Join(", ", serverGroups)}");
+
+		// Global: both servers and groups are unset → show everywhere
+		string globalCondition = "(`servers` IS NULL OR `servers` = '') AND (`groups` IS NULL OR `groups` = '')";
+		// Direct server match
+		string serverMatch = $"FIND_IN_SET({serverId}, `servers`)";
+		// Group match (only possible if this server belongs to any groups)
+		string? groupMatch = serverGroups.Count > 0
+			? string.Join(" OR ", serverGroups.Select(g => $"FIND_IN_SET({g}, `groups`)"))
+			: null;
+
+		string targeting = groupMatch != null
+			? $"(({globalCondition}) OR {serverMatch} OR {groupMatch})"
+			: $"(({globalCondition}) OR {serverMatch})";
+
+		var results = g_Db.ExecuteQuery($"SELECT * FROM `{Constants.TABLE_NAME}` WHERE `enabled` = 1 AND {targeting}");
 
 		if (results == null)
 		{
@@ -48,6 +65,7 @@ public partial class AdvertisementsCore
 			string enabled = pair.Value["enabled"]?.ToString() ?? "";
 			if (enabled == "0") continue;
 
+			string id = pair.Value["id"]?.ToString() ?? "";
 			string text = pair.Value["text"]?.ToString() ?? "";
 			string location = pair.Value["location"]?.ToString() ?? "";
 			string flags = pair.Value["flags"]?.ToString() ?? "";
@@ -55,11 +73,13 @@ public partial class AdvertisementsCore
 
 			// For each multiply, add the advertisement to the list
 			for (int i = 0; i < multiply; i++)
-				g_AdvertisementsList.Add(new Advertisement(text, location, flags));
+				g_AdvertisementsList.Add(new Advertisement(id, text, location, flags));
 		}
 
 		// filter the not enabled advertisements
 		Log($"Loaded {g_AdvertisementsList.Count()} advertisements (ad * multiply).");
+		Log($"Loaded advertisements: {string.Join(", ", g_AdvertisementsList.Select(ad => ad.Id))}");
+
 		timer = AddTimer(Config.Timer, Timer_Advertisements, TimerFlags.REPEAT);
 	}
 
@@ -137,8 +157,9 @@ public partial class AdvertisementsCore
 		return modifiedValue;
 	}
 
-	public class Advertisement(string message, string location, string flag)
+	public class Advertisement(string id, string message, string location, string flag)
 	{
+		public string Id { get; set; } = id;
 		public string Text { get; set; } = message;
 		public string Location { get; set; } = location;
 		public string Flag { get; set; } = flag;
@@ -168,6 +189,32 @@ public partial class AdvertisementsCore
 			.Replace("\n", "\u2029");
 
 		return ModifyColorValue(message);
+	}
+
+	private List<int> GetServerGroups()
+	{
+		int serverId = ConVars.ServerIdCvar != null && ConVars.ServerIdCvar.Value != 0 ? ConVars.ServerIdCvar.Value : Config.ServerId;
+
+		if (g_Db == null)
+		{
+			Log("Database connection is not initialized.");
+			return [];
+		}
+
+		var results = g_Db.ExecuteQuery($"SELECT `id` FROM `sa_servers_groups` WHERE FIND_IN_SET({serverId}, `servers`)");
+
+		if (results == null)
+			return [];
+
+		List<int> groupIds = [];
+		foreach (KeyValuePair<int, MySqlFieldValue> pair in results)
+		{
+			if (pair.Value == null) continue;
+			if (int.TryParse(pair.Value["id"]?.ToString(), out int groupId))
+				groupIds.Add(groupId);
+		}
+
+		return groupIds;
 	}
 
 	public static void Log(string message)
