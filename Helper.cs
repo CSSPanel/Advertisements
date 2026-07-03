@@ -46,7 +46,7 @@ public partial class AdvertisementsCore
 			: $"(({globalCondition}) OR {serverMatch})";
 
 		// Node targeting: ads with no nodes set are shown everywhere; node-targeted ads
-		// only show on servers whose sa_node convar matches one of the listed ids
+		// only show on servers whose css_node convar matches one of the listed ids
 		string nodeCondition = nodeId != 0
 			? $"(`nodes` IS NULL OR `nodes` = '' OR FIND_IN_SET({nodeId}, `nodes`))"
 			: "(`nodes` IS NULL OR `nodes` = '')";
