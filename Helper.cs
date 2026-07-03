@@ -21,7 +21,8 @@ public partial class AdvertisementsCore
 		timer?.Kill();
 
 		int serverId = ConVars.ServerIdCvar != null && ConVars.ServerIdCvar.Value != 0 ? ConVars.ServerIdCvar.Value : Config.ServerId;
-		Log($"Fetching advertisements for serverId: {serverId}");
+		int nodeId = ConVars.NodeIdCvar != null ? ConVars.NodeIdCvar.Value : 0;
+		Log($"Fetching advertisements for serverId: {serverId}" + (nodeId != 0 ? $", nodeId: {nodeId}" : ""));
 
 		if (g_Db == null)
 		{
@@ -44,7 +45,13 @@ public partial class AdvertisementsCore
 			? $"(({globalCondition}) OR {serverMatch} OR {groupMatch})"
 			: $"(({globalCondition}) OR {serverMatch})";
 
-		var results = g_Db.ExecuteQuery($"SELECT * FROM `{Constants.TABLE_NAME}` WHERE `enabled` = 1 AND {targeting}");
+		// Node targeting: ads with no nodes set are shown everywhere; node-targeted ads
+		// only show on servers whose sa_node convar matches one of the listed ids
+		string nodeCondition = nodeId != 0
+			? $"(`nodes` IS NULL OR `nodes` = '' OR FIND_IN_SET({nodeId}, `nodes`))"
+			: "(`nodes` IS NULL OR `nodes` = '')";
+
+		var results = g_Db.ExecuteQuery($"SELECT * FROM `{Constants.TABLE_NAME}` WHERE `enabled` = 1 AND {targeting} AND {nodeCondition}");
 
 		if (results == null)
 		{
