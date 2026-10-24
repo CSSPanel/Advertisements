@@ -25,7 +25,9 @@ public partial class AdvertisementsCore
 			handle.TimerTime = 5;
 		}
 
-		panelAdIndex = (panelAdIndex + 1) % g_AdvertisementsList.Count; // Update panelAdIndex
+		// No ads (none set, or not fetched yet) - a modulo by 0 would throw on every round end
+		if (g_AdvertisementsList.Count > 0)
+			panelAdIndex = (panelAdIndex + 1) % g_AdvertisementsList.Count; // Update panelAdIndex
 
 		return HookResult.Continue;
 	}

@@ -55,9 +55,18 @@ Example Configuration (`/game/csgo/addons/counterstrikesharp/configs/plugins/Adv
   "DatabasePassword": "",
   "DatabaseName": "",
   "Timer": "25",
-  "ServerId": 1
+  "ServerId": 0
 }
 ```
+
+### Server id
+
+Ads can be targeted at servers and server groups, by the server's id in `sa_servers`. The plugin asks
+[CS2-SimpleAdmin](https://github.com/CSSPanel/Plugin) for it - SimpleAdmin finds (or creates) that row by the
+server's address - so nothing has to be set per server. Until SimpleAdmin knows the id (a second or two after
+start) only the ads for every server are shown.
+
+`ServerId` in the config is used only on a server without CS2-SimpleAdmin. The `css_serverid` convar is gone.
 
 ## Credits
 

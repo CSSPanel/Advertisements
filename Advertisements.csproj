@@ -8,6 +8,14 @@
     <PackageReference Include="CounterStrikeSharp.API" Version="1.0.317" />
     <PackageReference Include="Nexd.MySQL" Version="*" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- CS2-SimpleAdmin's shared API (addons/counterstrikesharp/shared/CS2-SimpleAdminApi), the build the
+         servers run. Not copied: the shared one must be the one loaded, or the capability is not found. -->
+    <Reference Include="CS2-SimpleAdminApi">
+      <HintPath>CS2-SimpleAdminApi.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
    <ItemGroup>
     <None Update="MySqlConnector.dll" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Nexd.MySQL.dll" CopyToOutputDirectory="PreserveNewest" />

@@ -20,7 +20,7 @@ public partial class AdvertisementsCore
 		// Stop the timer if it's running
 		timer?.Kill();
 
-		int serverId = ConVars.ServerIdCvar != null && ConVars.ServerIdCvar.Value != 0 ? ConVars.ServerIdCvar.Value : Config.ServerId;
+		int serverId = CurrentServerId();
 		int nodeId = ConVars.NodeIdCvar != null ? ConVars.NodeIdCvar.Value : 0;
 		Log($"Fetching advertisements for serverId: {serverId}" + (nodeId != 0 ? $", nodeId: {nodeId}" : ""));
 
@@ -30,12 +30,13 @@ public partial class AdvertisementsCore
 			return;
 		}
 
-		List<int> serverGroups = GetServerGroups();
+		// No id yet (or none at all): only the ads for every server
+		List<int> serverGroups = serverId > 0 ? GetServerGroups(serverId) : [];
 
 		// Global: both servers and groups are unset → show everywhere
 		string globalCondition = "(`servers` IS NULL OR `servers` = '') AND (`groups` IS NULL OR `groups` = '')";
 		// Direct server match
-		string serverMatch = $"FIND_IN_SET({serverId}, `servers`)";
+		string serverMatch = serverId > 0 ? $"FIND_IN_SET({serverId}, `servers`)" : "FALSE";
 		// Group match (only possible if this server belongs to any groups)
 		string? groupMatch = serverGroups.Count > 0
 			? string.Join(" OR ", serverGroups.Select(g => $"FIND_IN_SET({g}, `groups`)"))
@@ -195,10 +196,8 @@ public partial class AdvertisementsCore
 		return ModifyColorValue(message);
 	}
 
-	private List<int> GetServerGroups()
+	private List<int> GetServerGroups(int serverId)
 	{
-		int serverId = ConVars.ServerIdCvar != null && ConVars.ServerIdCvar.Value != 0 ? ConVars.ServerIdCvar.Value : Config.ServerId;
-
 		if (g_Db == null)
 		{
 			Log("Database connection is not initialized.");

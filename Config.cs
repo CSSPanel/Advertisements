@@ -11,5 +11,6 @@ public class AdvertisementConfig : BasePluginConfig
 	public string? DatabasePassword { get; set; } = "";
 	public string? DatabaseName { get; set; } = "";
 	public float Timer { get; set; } = 25;
-	public int ServerId { get; set; } = 1;
+	// Only without CS2-SimpleAdmin - with it, the server's id is its `sa_servers` row (see OnAllPluginsLoaded)
+	public int ServerId { get; set; } = 0;
 }
