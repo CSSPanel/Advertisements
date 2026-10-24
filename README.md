@@ -66,7 +66,11 @@ Ads can be targeted at servers and server groups, by the server's id in `sa_serv
 server's address - so nothing has to be set per server. Until SimpleAdmin knows the id (a second or two after
 start) only the ads for every server are shown.
 
-`ServerId` in the config is used only on a server without CS2-SimpleAdmin. The `css_serverid` convar is gone.
+Ads can also be targeted at nodes: the server's node is that same row's `node_id`, set in the panel's server
+settings.
+
+`ServerId` in the config is used only on a server without CS2-SimpleAdmin. The `css_serverid` and `css_node`
+convars are gone.
 
 ## Credits
 

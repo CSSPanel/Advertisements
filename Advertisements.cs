@@ -10,7 +10,7 @@ namespace Advertisements;
 public partial class AdvertisementsCore : BasePlugin, IPluginConfig<AdvertisementConfig>
 {
 	public override string ModuleName => "[CSSPanel] Advertisements";
-	public override string ModuleVersion => "2.1";
+	public override string ModuleVersion => "2.2";
 	public override string ModuleAuthor => "Johnoclock, xWidovV, ShiNxz";
 	public override string ModuleDescription => "Dispaly advertisements straight from the css-panel";
 
@@ -22,9 +22,9 @@ public partial class AdvertisementsCore : BasePlugin, IPluginConfig<Advertisemen
 	private static readonly PluginCapability<ICS2_SimpleAdminApi?> SimpleAdminCapability = new("simpleadmin:api");
 	private ICS2_SimpleAdminApi? g_SimpleAdmin = null;
 
-	// The server's `sa_servers` id, which the ads are targeted by. CS2-SimpleAdmin finds (or creates) that
-	// row by the server's address, so it is asked instead of a per-server convar. 0 until it is known:
-	// only the ads for every server are shown then.
+	// The server's `sa_servers` id, which the ads are targeted by - and its node, from that row's `node_id`.
+	// CS2-SimpleAdmin finds (or creates) the row by the server's address, so it is asked instead of a
+	// per-server convar. 0 until it is known: only the ads for every server and every node are shown then.
 	private int g_ServerId = 0;
 	private CounterStrikeSharp.API.Modules.Timers.Timer? serverIdTimer;
 
@@ -39,7 +39,6 @@ public partial class AdvertisementsCore : BasePlugin, IPluginConfig<Advertisemen
 	public override void Load(bool hotReload)
 	{
 		RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound, HookMode.Pre);
-		RegisterFakeConVars(typeof(ConVars));
 
 		if (Config == null)
 		{

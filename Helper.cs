@@ -21,14 +21,15 @@ public partial class AdvertisementsCore
 		timer?.Kill();
 
 		int serverId = CurrentServerId();
-		int nodeId = ConVars.NodeIdCvar != null ? ConVars.NodeIdCvar.Value : 0;
-		Log($"Fetching advertisements for serverId: {serverId}" + (nodeId != 0 ? $", nodeId: {nodeId}" : ""));
 
 		if (g_Db == null)
 		{
 			Log("Database connection is not initialized.");
 			return;
 		}
+
+		int nodeId = serverId > 0 ? GetServerNode(serverId) : 0;
+		Log($"Fetching advertisements for serverId: {serverId}" + (nodeId != 0 ? $", nodeId: {nodeId}" : ""));
 
 		// No id yet (or none at all): only the ads for every server
 		List<int> serverGroups = serverId > 0 ? GetServerGroups(serverId) : [];
@@ -47,7 +48,7 @@ public partial class AdvertisementsCore
 			: $"(({globalCondition}) OR {serverMatch})";
 
 		// Node targeting: ads with no nodes set are shown everywhere; node-targeted ads
-		// only show on servers whose css_node convar matches one of the listed ids
+		// only show on servers whose `sa_servers.node_id` is one of the listed ids
 		string nodeCondition = nodeId != 0
 			? $"(`nodes` IS NULL OR `nodes` = '' OR FIND_IN_SET({nodeId}, `nodes`))"
 			: "(`nodes` IS NULL OR `nodes` = '')";
@@ -194,6 +195,25 @@ public partial class AdvertisementsCore
 			.Replace("\n", "\u2029");
 
 		return ModifyColorValue(message);
+	}
+
+	/// <summary>
+	/// The node the server is on - `sa_servers.node_id`, set in the platform's server settings (the same
+	/// ids the ads' node picker lists). 0 when it has none.
+	/// </summary>
+	private int GetServerNode(int serverId)
+	{
+		var results = g_Db?.ExecuteQuery($"SELECT `node_id` FROM `sa_servers` WHERE `id` = {serverId} LIMIT 1");
+		if (results == null)
+			return 0;
+
+		foreach (KeyValuePair<int, MySqlFieldValue> pair in results)
+		{
+			if (pair.Value != null && int.TryParse(pair.Value["node_id"]?.ToString(), out int nodeId))
+				return nodeId;
+		}
+
+		return 0;
 	}
 
 	private List<int> GetServerGroups(int serverId)
