@@ -52,7 +52,8 @@ public partial class AdvertisementsCore : BasePlugin, IPluginConfig<Advertisemen
 			return;
 		}
 
-		g_Db = new(Config.DatabaseHost, Config.DatabaseUser, Config.DatabasePassword, Config.DatabaseName, Config.DatabasePort);
+		// Nexd.MySQL defaults to SslMode=none, which a TLS-only database refuses
+		g_Db = new(Config.DatabaseHost, Config.DatabaseUser, Config.DatabasePassword, Config.DatabaseName, Config.DatabasePort, string.IsNullOrWhiteSpace(Config.DatabaseSslMode) ? "Preferred" : Config.DatabaseSslMode);
 		g_Db.ExecuteNonQueryAsync($"CREATE TABLE IF NOT EXISTS `{Constants.TABLE_NAME}` (`id` INT NOT NULL AUTO_INCREMENT, `text` TEXT NOT NULL, `location` VARCHAR(128) NOT NULL COMMENT 'chat / center', `servers` TEXT COMMENT 'NULL/blank = all DEFAULT NULL', `groups` TEXT, `flags` VARCHAR(512), `multiply` int(12) NOT NULL DEFAULT 1, `enabled` BOOLEAN NOT NULL DEFAULT TRUE, `nodes` TEXT COMMENT 'NULL/blank = all, or comma-separated node ids', PRIMARY KEY (`id`));");
 
 		Log("Plugin loaded");
