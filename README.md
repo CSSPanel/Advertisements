@@ -72,6 +72,27 @@ settings.
 `ServerId` in the config is used only on a server without CS2-SimpleAdmin. The `css_serverid` and `css_node`
 convars are gone.
 
+### HUD ads
+
+Ads with location `hud` show as a strip over the chat or under the score, for 3-15 seconds, drawn through
+Panorama ([PanoramaManager](https://github.com/Next-il/PanoramaManager)). Their look (position, accent color,
+icon, title, time on screen, HTML mode) is the `hud` JSON column the panel writes, and the text takes the chat
+ads' `{Color}` tags and `{VARIABLES}` plus `{{b:text}}`, `{{cmd:!vip}}`, `{{accent:text}}` and `{{br}}`.
+
+The layout ships in the workshop addon: `hud/panorama/layout/custom_game/ads_hud.xml` with
+`hud/panorama/styles/custom_game/ads_hud.css` and `hud_shared.css`. The server needs CounterStrikeSharp 1.0.374
+or newer.
+
+```json
+"Hud": {
+  "Enabled": true,
+  "WaitForFreezeEnd": true
+}
+```
+
+- `Enabled` - false prints HUD ads in chat instead (so does a strip that failed to start).
+- `WaitForFreezeEnd` - a HUD ad that comes up in freeze time waits until the round goes live.
+
 ## Credits
 
 - **[partiusfabaa](https://github.com/partiusfabaa):** For his base original plugin.

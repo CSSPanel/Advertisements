@@ -1,0 +1,98 @@
+<root>
+	<styles>
+		<include src="s2r://panorama/styles/custom_game/hud_shared.vcss_c" />
+		<include src="s2r://panorama/styles/custom_game/ads_hud.vcss_c" />
+	</styles>
+
+	<!--
+		Advertisements HUD - the strip for ads with location "hud" (the website's ads table, `hud` column):
+		over the chat (pos-chat) or under the score (pos-top), for the ad's 3-15 seconds, with a 2px bar
+		draining along its bottom edge. A title makes the taller strip, for events.
+		Spec: HudMenu/previews/more, view #tips (tab "Ads").
+
+		NOT INTERACTIVE. hittest false everywhere; the plugin opens it with CaptureInput = false.
+
+		CONTRACT (AdHud.cs must match)
+		  RootPanelId  = "AdsRoot"   RevealClass = "show"   RowCount = 0
+		  CaptureInput = false       HideHud = None         SharedText = false
+
+		The root is full-screen and carries nothing visible itself; it is opened once per player and
+		stays open. The strip has its own "show", and "hidden" (collapse) while no ad is on.
+
+		THE TEXT is 4 lines of 8 Labels each, since a Label takes no markup (the html attribute is
+		not on the CustomHud whitelist). The plugin breaks the ad into lines and styled pieces (AdHudText.cs)
+		and writes one piece per Label: bold, a colour, a command in the accent colour.
+
+		DIALOG VARIABLES
+		  ad_title                 the title (big strip only)
+		  ad_t<line>_<run>         one piece of text, line 0-3, run 0-7
+
+		CLASSES THE SERVER TOGGLES
+		  ad_strip    show hidden | pos-chat pos-top | ac-orange ac-gold ac-red ac-blue ac-green ac-purple ac-plain
+		              ic-info ic-star ic-trophy ic-news ic-globe ic-warning no-icon | big | rtl
+		  ad_l<n>     hidden                       an unused line
+		  ad_r<n>_<m> hidden gap b i u             gap = a word space to its left (a Label trims its own edges)
+		              c-<rrggbb>                   one colour from the palette in ads_hud.css, or none
+		  ad_bar      at-0..at-19                  where the bar starts, 5% a step (none = full)
+		              dur-1..dur-15                how long it drains for, in seconds
+		              run                          drain to 0, one linear clip transition
+	-->
+	<Panel class="hud-screen" hittest="false">
+		<Panel id="AdsRoot" class="ads-root" hittest="false">
+
+			<Panel id="ad_strip" class="ad hidden" hittest="false">
+				<Panel class="ad-row" hittest="false">
+					<Panel class="ad-icon ad-icon-l" hittest="false" />
+					<Panel class="ad-text" hittest="false">
+						<Label class="ad-title" hittest="false" text="{s:ad_title}" />
+						<Panel id="ad_l0" class="ad-line hidden" hittest="false">
+							<Label id="ad_r0_0" class="ad-run hidden" hittest="false" text="{s:ad_t0_0}" />
+							<Label id="ad_r0_1" class="ad-run hidden" hittest="false" text="{s:ad_t0_1}" />
+							<Label id="ad_r0_2" class="ad-run hidden" hittest="false" text="{s:ad_t0_2}" />
+							<Label id="ad_r0_3" class="ad-run hidden" hittest="false" text="{s:ad_t0_3}" />
+							<Label id="ad_r0_4" class="ad-run hidden" hittest="false" text="{s:ad_t0_4}" />
+							<Label id="ad_r0_5" class="ad-run hidden" hittest="false" text="{s:ad_t0_5}" />
+							<Label id="ad_r0_6" class="ad-run hidden" hittest="false" text="{s:ad_t0_6}" />
+							<Label id="ad_r0_7" class="ad-run hidden" hittest="false" text="{s:ad_t0_7}" />
+						</Panel>
+						<Panel id="ad_l1" class="ad-line hidden" hittest="false">
+							<Label id="ad_r1_0" class="ad-run hidden" hittest="false" text="{s:ad_t1_0}" />
+							<Label id="ad_r1_1" class="ad-run hidden" hittest="false" text="{s:ad_t1_1}" />
+							<Label id="ad_r1_2" class="ad-run hidden" hittest="false" text="{s:ad_t1_2}" />
+							<Label id="ad_r1_3" class="ad-run hidden" hittest="false" text="{s:ad_t1_3}" />
+							<Label id="ad_r1_4" class="ad-run hidden" hittest="false" text="{s:ad_t1_4}" />
+							<Label id="ad_r1_5" class="ad-run hidden" hittest="false" text="{s:ad_t1_5}" />
+							<Label id="ad_r1_6" class="ad-run hidden" hittest="false" text="{s:ad_t1_6}" />
+							<Label id="ad_r1_7" class="ad-run hidden" hittest="false" text="{s:ad_t1_7}" />
+						</Panel>
+						<Panel id="ad_l2" class="ad-line hidden" hittest="false">
+							<Label id="ad_r2_0" class="ad-run hidden" hittest="false" text="{s:ad_t2_0}" />
+							<Label id="ad_r2_1" class="ad-run hidden" hittest="false" text="{s:ad_t2_1}" />
+							<Label id="ad_r2_2" class="ad-run hidden" hittest="false" text="{s:ad_t2_2}" />
+							<Label id="ad_r2_3" class="ad-run hidden" hittest="false" text="{s:ad_t2_3}" />
+							<Label id="ad_r2_4" class="ad-run hidden" hittest="false" text="{s:ad_t2_4}" />
+							<Label id="ad_r2_5" class="ad-run hidden" hittest="false" text="{s:ad_t2_5}" />
+							<Label id="ad_r2_6" class="ad-run hidden" hittest="false" text="{s:ad_t2_6}" />
+							<Label id="ad_r2_7" class="ad-run hidden" hittest="false" text="{s:ad_t2_7}" />
+						</Panel>
+						<Panel id="ad_l3" class="ad-line hidden" hittest="false">
+							<Label id="ad_r3_0" class="ad-run hidden" hittest="false" text="{s:ad_t3_0}" />
+							<Label id="ad_r3_1" class="ad-run hidden" hittest="false" text="{s:ad_t3_1}" />
+							<Label id="ad_r3_2" class="ad-run hidden" hittest="false" text="{s:ad_t3_2}" />
+							<Label id="ad_r3_3" class="ad-run hidden" hittest="false" text="{s:ad_t3_3}" />
+							<Label id="ad_r3_4" class="ad-run hidden" hittest="false" text="{s:ad_t3_4}" />
+							<Label id="ad_r3_5" class="ad-run hidden" hittest="false" text="{s:ad_t3_5}" />
+							<Label id="ad_r3_6" class="ad-run hidden" hittest="false" text="{s:ad_t3_6}" />
+							<Label id="ad_r3_7" class="ad-run hidden" hittest="false" text="{s:ad_t3_7}" />
+						</Panel>
+					</Panel>
+					<Panel class="ad-icon ad-icon-r" hittest="false" />
+				</Panel>
+				<Panel class="ad-track" hittest="false">
+					<Panel id="ad_bar" class="ad-bar" hittest="false" />
+				</Panel>
+			</Panel>
+
+		</Panel>
+	</Panel>
+</root>

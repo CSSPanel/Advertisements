@@ -7,6 +7,7 @@ using CounterStrikeSharp.API;
 using Nexd.MySQL;
 using CounterStrikeSharp.API.Modules.Admin;
 using System.Text.RegularExpressions;
+using Advertisements.Hud;
 
 namespace Advertisements;
 
@@ -78,9 +79,20 @@ public partial class AdvertisementsCore
 			string flags = pair.Value["flags"]?.ToString() ?? "";
 			int multiply = int.TryParse(pair.Value["multiply"]?.ToString(), out int parsedChance) ? parsedChance : 1;
 
+			// The HUD strip's look, a JSON column added by the website's ads-hud.sql. Only "hud" ads read it, and a
+			// database without the column yet gives every HUD ad the default look.
+			AdHudStyle? hud = null;
+			if (location == "hud")
+			{
+				pair.Value.TryGetValue("hud", out string? hudJson);
+				hud = AdHudStyle.Parse(hudJson, out string? hudError);
+				if (hudError != null)
+					Log($"Advertisement {id}: unreadable hud settings ({hudError}), using the defaults");
+			}
+
 			// For each multiply, add the advertisement to the list
 			for (int i = 0; i < multiply; i++)
-				g_AdvertisementsList.Add(new Advertisement(id, text, location, flags));
+				g_AdvertisementsList.Add(new Advertisement(id, text, location, flags) { Hud = hud });
 		}
 
 		// filter the not enabled advertisements
@@ -103,13 +115,23 @@ public partial class AdvertisementsCore
 		Random random = new();
 		selectedAd = g_AdvertisementsList.ElementAt(random.Next(0, g_AdvertisementsList.Count));
 
+		// A HUD ad in freeze time waits for the round to go live (EventRoundFreezeEnd)
+		if (HudHoldForFreezeTime(selectedAd))
+			return;
+
+		BroadcastAdvertisement(selectedAd);
+	}
+
+	/// <summary>Shows an ad to every player its flags allow.</summary>
+	private void BroadcastAdvertisement(Advertisement advertisement)
+	{
 		foreach (CCSPlayerController player in Utilities.GetPlayers())
 		{
 			if (!ValidClient(player)) continue;
 
-			if (!string.IsNullOrEmpty(selectedAd.Flag) && !AdminManager.PlayerHasPermissions(player, selectedAd.Flag.Split(','))) continue;
+			if (!string.IsNullOrEmpty(advertisement.Flag) && !AdminManager.PlayerHasPermissions(player, advertisement.Flag.Split(','))) continue;
 
-			DisplayAdvertisement(player, selectedAd);
+			DisplayAdvertisement(player, advertisement);
 		}
 	}
 
@@ -133,6 +155,11 @@ public partial class AdvertisementsCore
 			case "center":
 				// Display the advertisement in the center of the screen
 				player.PrintToCenter($" {ModifyColorValue(Config.ChatPrefix!)} {ReplaceMessageTags(advertisement.Text, player)}");
+				break;
+
+			case "hud":
+				// The strip over the chat or under the score (Advertisements.Hud.cs); chat when it can't show
+				DisplayHudAdvertisement(player, advertisement);
 				break;
 
 			default:
@@ -169,11 +196,13 @@ public partial class AdvertisementsCore
 		public string Text { get; set; } = message;
 		public string Location { get; set; } = location;
 		public string Flag { get; set; } = flag;
+		// Location "hud" only: the strip's look from the `hud` column
+		public AdHudStyle? Hud { get; init; }
 	}
 
 	private static bool ValidClient(CCSPlayerController player)
 	{
-		if (player == null || !player.IsValid || player.Connected != PlayerConnectedState.PlayerConnected || player.IsHLTV || !player.PlayerPawn.IsValid || player.UserId == -1 || player.IsBot || player.Slot == 65535) return false;
+		if (player == null || !player.IsValid || player.Connected != PlayerConnectedState.Connected || player.IsHLTV || !player.PlayerPawn.IsValid || player.UserId == -1 || player.IsBot || player.Slot == 65535) return false;
 		return true;
 	}
 
@@ -182,6 +211,8 @@ public partial class AdvertisementsCore
 		// Replace various tags with corresponding values
 		message = message
 			.Replace("{CURRENTMAP}", Server.MapName)
+			// The name the website's ads page offers
+			.Replace("{MAPNAME}", Server.MapName)
 			.Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
 			.Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"))
 			.Replace("{SERVERNAME}", ConVar.Find("hostname")!.StringValue)
@@ -248,7 +279,7 @@ public partial class AdvertisementsCore
 	public static List<CCSPlayerController> GetValidPlayers()
 	{
 		return Utilities.GetPlayers().FindAll(p => p is
-		{ IsValid: true, IsBot: false, Connected: PlayerConnectedState.PlayerConnected });
+		{ IsValid: true, IsBot: false, Connected: PlayerConnectedState.Connected });
 	}
 
 	public static bool IsValidSteamId64(string input)

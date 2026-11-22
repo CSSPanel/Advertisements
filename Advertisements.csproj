@@ -1,12 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- net10.0 and CounterStrikeSharp.API 1.0.374 are PanoramaManager's floor: the package targets net10.0 and
+         declares that CSS version, so a lower pin fails restore with NU1605. The servers run CSS 1.0.380. -->
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.317" />
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.374" />
     <PackageReference Include="Nexd.MySQL" Version="*" />
+
+    <!-- The HUD strip (AdHud.cs). Copied next to the plugin by CopyPanoramaManager below: each
+         CounterStrikeSharp plugin loads from its own folder. Same version as our other HUD plugins. -->
+    <PackageReference Include="PanoramaManager" Version="0.4.3" />
   </ItemGroup>
   <ItemGroup>
     <!-- CS2-SimpleAdmin's shared API (addons/counterstrikesharp/shared/CS2-SimpleAdminApi), the build the
@@ -20,4 +26,13 @@
     <None Update="MySqlConnector.dll" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Nexd.MySQL.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- A class library does not copy package dlls on build, and turning CopyLocalLockFileAssemblies on would
+       copy CounterStrikeSharp.API's whole tree. This copies PanoramaManager only. -->
+  <Target Name="CopyPanoramaManager" AfterTargets="ResolveLockFileCopyLocalFiles">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Include="@(RuntimeCopyLocalItems)"
+                               Condition="'%(RuntimeCopyLocalItems.NuGetPackageId)' == 'PanoramaManager'" />
+    </ItemGroup>
+  </Target>
 </Project>

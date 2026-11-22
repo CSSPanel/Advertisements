@@ -1,0 +1,325 @@
+/*
+    ads_hud - the strip for HUD ads (location "hud" in the website's ads table). Include hud_shared.vcss_c first.
+
+    Ported from the approved preview (HudMenu/previews/more, view #tips, tab "Ads": .ad, .ad-*). Sizes are
+    1080p pixels, the same numbers as the preview.
+
+    One strip per player, over the chat (pos-chat, sliding in from the left) or under the score (pos-top,
+    sliding down). It fades in with a blur and leaves the same way when "show" comes off. The accent colours
+    the edge, the icon, the bar and any command in the text.
+
+    THE TEXT is a pool of Labels, 4 lines of 8 (see ads_hud.xml): a Label has no spans, so every bold word or
+    coloured command is its own Label, and the plugin decides where a line ends. A Label trims the spaces at
+    its edges, so a word space between two of them is the "gap" margin. Colours are a fixed palette of c-rrggbb
+    classes (the accents, the chat colour tags, white for bold); the plugin picks the nearest for any other.
+
+    RIGHT TO LEFT ("rtl"): Panorama has no direction (see MVP-Music's music_hud.css), so the plugin writes a
+    Hebrew line's pieces in reverse and the line is right-aligned here. The icon and the edge move to the
+    right, and the bar drains towards the right.
+
+    THE BAR is one linear clip transition, as in afk_hud. The plugin snaps it (no dur-N on) to where it starts
+    - full, or at-N when a strip comes back part way after a respawn - and a moment later adds dur-N and
+    "run" together, and the client drains it to 0 on its own.
+
+    UNVERIFIED IN GAME, each with a harmless failure:
+      - max-width on the strip and the title: the plugin keeps lines narrower anyway; without it a long title
+        does not wrap.
+      - blur in transition-property: if blur does not animate, the strip is simply sharp at once.
+      - the track's width: 100% inside a strip sized by its text (afk_hud's card has a fixed width). The row
+        gives the strip its width and the track should take it; if it resolves to 0 there is no bar.
+    All icons are CS2's own (icons/ui/*), tinted with wash-color. Nothing new ships in the addon.
+*/
+
+/* ------------------------------------------------------------------ root */
+
+/* Opened once per player and left open; the strip carries its own "show". */
+.ads-root {
+    width: 100%;
+    height: 100%;
+    visibility: collapse;
+}
+.ads-root.show { visibility: visible; }
+
+/* ------------------------------------------------------------------ the strip */
+
+.ad {
+    flow-children: down;
+    max-width: 500px;
+    border-left: 2px solid #f7783c;
+    border-right: 0px solid #f7783c;
+    world-blur: gaussian(8.0);
+    background-color: gradient(linear, 0% 0%, 0% 100%, from(#12171ee2), to(#0b0f14ec));
+
+    opacity: 0;
+    blur: gaussian(7.0);
+    transition-property: opacity, transform, blur;
+    transition-duration: 0.3s, 0.34s, 0.3s;
+    transition-timing-function: ease-out, cubic-bezier( 0.2, 0.8, 0.25, 1.0 ), ease-out;
+}
+
+/* Over the chat: bottom left, above the chat box, in from the left. */
+.ad.pos-chat {
+    horizontal-align: left;
+    vertical-align: bottom;
+    margin-left: 22px;
+    margin-bottom: 236px;
+    transform: translate3d( -540px, 0px, 0px );
+}
+/* Under the score: top center, down from above. */
+.ad.pos-top {
+    horizontal-align: center;
+    vertical-align: top;
+    margin-top: 74px;
+    transform: translate3d( 0px, -60px, 0px );
+}
+
+/* After the positions, so it wins over their offsets. Entering is quicker than leaving: the transition on
+   the state being entered is the one that plays. */
+.ad.show {
+    opacity: 1;
+    blur: gaussian(0.0);
+    transform: translate3d( 0px, 0px, 0px );
+    transition-duration: 0.18s, 0.22s, 0.18s;
+}
+
+/* The row holds the padding, so the track below can run the strip's full width at its bottom edge. */
+.ad-row {
+    flow-children: right;
+    padding: 7px 14px 8px 10px;
+}
+
+.ad-icon {
+    width: 15px;
+    height: 15px;
+    vertical-align: center;
+    background-image: url("s2r://panorama/images/icons/ui/info.vsvg");
+    background-size: 100% 100%;
+    /* The icons are 32x32 SVGs; rasterize at 2x the biggest drawn size so 1440p and 4K stay sharp. */
+    background-texture-size: 40px 40px;
+    background-repeat: no-repeat;
+    wash-color: #f7783c;
+}
+.ad-icon-l { margin-right: 9px; }
+.ad-icon-r { margin-left: 9px; visibility: collapse; }
+
+.ad-text {
+    flow-children: down;
+    vertical-align: center;
+}
+
+/* Events only (big): the title over the text. */
+.ad-title {
+    visibility: collapse;
+    max-width: 440px;
+    font-family: Stratum2 Medium Condensed;
+    font-size: 17px;
+    font-weight: bold;
+    letter-spacing: 0.4px;
+    line-height: 19px;
+    text-transform: uppercase;
+    white-space: normal;
+    color: #ffffff;
+}
+
+/* One line of text: up to 8 Labels side by side, never wrapping. */
+.ad-line {
+    flow-children: right;
+    height: 18px;
+}
+
+.ad-run {
+    font-family: Stratum2 Regular;
+    font-size: 13.5px;
+    line-height: 18px;
+    white-space: nowrap;
+    color: #d7dce1;
+}
+.ad-run.gap { margin-left: 4px; }
+.ad-run.b { font-weight: bold; }
+.ad-run.i { font-style: italic; }
+.ad-run.u { text-decoration: underline; }
+
+/* ------------------------------------------------------------------ the bar */
+
+.ad-track {
+    width: 100%;
+    height: 2px;
+}
+/* Zero by default, so taking "run" and the dur-N class off snaps it back instead of animating. */
+.ad-bar {
+    width: 100%;
+    height: 100%;
+    background-color: #f7783c80;
+    clip: rect( 0%, 100%, 100%, 0% );
+    transition-property: clip;
+    transition-duration: 0.0s;
+    transition-timing-function: linear;
+}
+
+/* ------------------------------------------------------------------ variants */
+
+/* A title: the taller strip, with a bigger icon. */
+.ad.big .ad-icon {
+    width: 20px;
+    height: 20px;
+}
+.ad.big .ad-title { visibility: visible; }
+
+/* Right to left: the edge, the icon and the padding swap sides; lines and the title sit on the right. */
+.ad.rtl {
+    border-left: 0px solid #f7783c;
+    border-right: 2px solid #f7783c;
+}
+.ad.rtl .ad-row { padding: 7px 10px 8px 14px; }
+.ad.rtl .ad-icon-l { visibility: collapse; }
+.ad.rtl .ad-icon-r { visibility: visible; }
+.ad.rtl .ad-line { horizontal-align: right; }
+.ad.rtl .ad-title {
+    horizontal-align: right;
+    text-align: right;
+}
+
+/* After rtl, so a big right-to-left strip keeps its side padding and gets the taller top and bottom. */
+.ad.big .ad-row {
+    padding-top: 8px;
+    padding-bottom: 9px;
+}
+
+/* No icon, last: it wins over the rtl pair above. */
+.ad.no-icon .ad-icon { visibility: collapse; }
+
+/* ------------------------------------------------------------------ accents (AD_HUD_ACCENTS) */
+
+/* After .ad.rtl, so the colour wins over its border shorthand: same specificity, later rule. */
+.ad.ac-orange { border-left-color: #f7783c; border-right-color: #f7783c; }
+.ad.ac-orange .ad-icon { wash-color: #f7783c; }
+.ad.ac-orange .ad-bar { background-color: #f7783c80; }
+.ad.ac-gold { border-left-color: #f0a531; border-right-color: #f0a531; }
+.ad.ac-gold .ad-icon { wash-color: #f0a531; }
+.ad.ac-gold .ad-bar { background-color: #f0a53180; }
+.ad.ac-red { border-left-color: #e0432f; border-right-color: #e0432f; }
+.ad.ac-red .ad-icon { wash-color: #e0432f; }
+.ad.ac-red .ad-bar { background-color: #e0432f80; }
+.ad.ac-blue { border-left-color: #56a0dd; border-right-color: #56a0dd; }
+.ad.ac-blue .ad-icon { wash-color: #56a0dd; }
+.ad.ac-blue .ad-bar { background-color: #56a0dd80; }
+.ad.ac-green { border-left-color: #4caf6d; border-right-color: #4caf6d; }
+.ad.ac-green .ad-icon { wash-color: #4caf6d; }
+.ad.ac-green .ad-bar { background-color: #4caf6d80; }
+.ad.ac-purple { border-left-color: #9b6cd6; border-right-color: #9b6cd6; }
+.ad.ac-purple .ad-icon { wash-color: #9b6cd6; }
+.ad.ac-purple .ad-bar { background-color: #9b6cd680; }
+.ad.ac-plain { border-left-color: #8b939c; border-right-color: #8b939c; }
+.ad.ac-plain .ad-icon { wash-color: #8b939c; }
+.ad.ac-plain .ad-bar { background-color: #8b939c80; }
+
+/* ------------------------------------------------------------------ icons (AD_HUD_ICONS) */
+
+.ad.ic-info .ad-icon { background-image: url("s2r://panorama/images/icons/ui/info.vsvg"); }
+.ad.ic-star .ad-icon { background-image: url("s2r://panorama/images/icons/ui/favorite_star_filled.vsvg"); }
+.ad.ic-trophy .ad-icon { background-image: url("s2r://panorama/images/icons/ui/trophy.vsvg"); }
+.ad.ic-news .ad-icon { background-image: url("s2r://panorama/images/icons/ui/news.vsvg"); }
+.ad.ic-globe .ad-icon { background-image: url("s2r://panorama/images/icons/ui/globe.vsvg"); }
+.ad.ic-warning .ad-icon { background-image: url("s2r://panorama/images/icons/ui/warning.vsvg"); }
+
+/* ------------------------------------------------------------------ text colours */
+
+/* The accents, the chat colour tags ({Red}, {Lime}...), white for bold, and two common HTML ones.
+   Must match AdHudLayout.Palette in AdHudText.cs. */
+.ad-run.c-f7783c { color: #f7783c; }
+.ad-run.c-f0a531 { color: #f0a531; }
+.ad-run.c-e0432f { color: #e0432f; }
+.ad-run.c-56a0dd { color: #56a0dd; }
+.ad-run.c-4caf6d { color: #4caf6d; }
+.ad-run.c-9b6cd6 { color: #9b6cd6; }
+.ad-run.c-8b939c { color: #8b939c; }
+.ad-run.c-f30000 { color: #f30000; }
+.ad-run.c-40ff3f { color: #40ff3f; }
+.ad-run.c-dbd46c { color: #dbd46c; }
+.ad-run.c-5e98d8 { color: #5e98d8; }
+.ad-run.c-a5a500 { color: #a5a500; }
+.ad-run.c-a4fd49 { color: #a4fd49; }
+.ad-run.c-fa4041 { color: #fa4041; }
+.ad-run.c-b681ed { color: #b681ed; }
+.ad-run.c-d02fe1 { color: #d02fe1; }
+.ad-run.c-c4c9cf { color: #c4c9cf; }
+.ad-run.c-eee27e { color: #eee27e; }
+.ad-run.c-d5a332 { color: #d5a332; }
+.ad-run.c-afc1d5 { color: #afc1d5; }
+.ad-run.c-5c98d7 { color: #5c98d7; }
+.ad-run.c-4b69fd { color: #4b69fd; }
+.ad-run.c-b0c2d6 { color: #b0c2d6; }
+.ad-run.c-f000f0 { color: #f000f0; }
+.ad-run.c-ea4c4d { color: #ea4c4d; }
+.ad-run.c-f5a623 { color: #f5a623; }
+.ad-run.c-ffffff { color: #ffffff; }
+.ad-run.c-d7dce1 { color: #d7dce1; }
+.ad-run.c-00ffff { color: #00ffff; }
+.ad-run.c-ff69b4 { color: #ff69b4; }
+
+/* ------------------------------------------------------------------ bar steps */
+
+/* Where it starts, left to right. */
+.ad-bar.at-0 { clip: rect( 0%, 0%, 100%, 0% ); }
+.ad-bar.at-1 { clip: rect( 0%, 5%, 100%, 0% ); }
+.ad-bar.at-2 { clip: rect( 0%, 10%, 100%, 0% ); }
+.ad-bar.at-3 { clip: rect( 0%, 15%, 100%, 0% ); }
+.ad-bar.at-4 { clip: rect( 0%, 20%, 100%, 0% ); }
+.ad-bar.at-5 { clip: rect( 0%, 25%, 100%, 0% ); }
+.ad-bar.at-6 { clip: rect( 0%, 30%, 100%, 0% ); }
+.ad-bar.at-7 { clip: rect( 0%, 35%, 100%, 0% ); }
+.ad-bar.at-8 { clip: rect( 0%, 40%, 100%, 0% ); }
+.ad-bar.at-9 { clip: rect( 0%, 45%, 100%, 0% ); }
+.ad-bar.at-10 { clip: rect( 0%, 50%, 100%, 0% ); }
+.ad-bar.at-11 { clip: rect( 0%, 55%, 100%, 0% ); }
+.ad-bar.at-12 { clip: rect( 0%, 60%, 100%, 0% ); }
+.ad-bar.at-13 { clip: rect( 0%, 65%, 100%, 0% ); }
+.ad-bar.at-14 { clip: rect( 0%, 70%, 100%, 0% ); }
+.ad-bar.at-15 { clip: rect( 0%, 75%, 100%, 0% ); }
+.ad-bar.at-16 { clip: rect( 0%, 80%, 100%, 0% ); }
+.ad-bar.at-17 { clip: rect( 0%, 85%, 100%, 0% ); }
+.ad-bar.at-18 { clip: rect( 0%, 90%, 100%, 0% ); }
+.ad-bar.at-19 { clip: rect( 0%, 95%, 100%, 0% ); }
+
+/* Right to left it drains towards the right edge. */
+.ad.rtl .ad-bar.at-0 { clip: rect( 0%, 100%, 100%, 100% ); }
+.ad.rtl .ad-bar.at-1 { clip: rect( 0%, 100%, 100%, 95% ); }
+.ad.rtl .ad-bar.at-2 { clip: rect( 0%, 100%, 100%, 90% ); }
+.ad.rtl .ad-bar.at-3 { clip: rect( 0%, 100%, 100%, 85% ); }
+.ad.rtl .ad-bar.at-4 { clip: rect( 0%, 100%, 100%, 80% ); }
+.ad.rtl .ad-bar.at-5 { clip: rect( 0%, 100%, 100%, 75% ); }
+.ad.rtl .ad-bar.at-6 { clip: rect( 0%, 100%, 100%, 70% ); }
+.ad.rtl .ad-bar.at-7 { clip: rect( 0%, 100%, 100%, 65% ); }
+.ad.rtl .ad-bar.at-8 { clip: rect( 0%, 100%, 100%, 60% ); }
+.ad.rtl .ad-bar.at-9 { clip: rect( 0%, 100%, 100%, 55% ); }
+.ad.rtl .ad-bar.at-10 { clip: rect( 0%, 100%, 100%, 50% ); }
+.ad.rtl .ad-bar.at-11 { clip: rect( 0%, 100%, 100%, 45% ); }
+.ad.rtl .ad-bar.at-12 { clip: rect( 0%, 100%, 100%, 40% ); }
+.ad.rtl .ad-bar.at-13 { clip: rect( 0%, 100%, 100%, 35% ); }
+.ad.rtl .ad-bar.at-14 { clip: rect( 0%, 100%, 100%, 30% ); }
+.ad.rtl .ad-bar.at-15 { clip: rect( 0%, 100%, 100%, 25% ); }
+.ad.rtl .ad-bar.at-16 { clip: rect( 0%, 100%, 100%, 20% ); }
+.ad.rtl .ad-bar.at-17 { clip: rect( 0%, 100%, 100%, 15% ); }
+.ad.rtl .ad-bar.at-18 { clip: rect( 0%, 100%, 100%, 10% ); }
+.ad.rtl .ad-bar.at-19 { clip: rect( 0%, 100%, 100%, 5% ); }
+
+/* How long it drains for. Durations are 3-15s; a strip restored part way can have 1 or 2 left. */
+.ad-bar.dur-1 { transition-duration: 1.0s; }
+.ad-bar.dur-2 { transition-duration: 2.0s; }
+.ad-bar.dur-3 { transition-duration: 3.0s; }
+.ad-bar.dur-4 { transition-duration: 4.0s; }
+.ad-bar.dur-5 { transition-duration: 5.0s; }
+.ad-bar.dur-6 { transition-duration: 6.0s; }
+.ad-bar.dur-7 { transition-duration: 7.0s; }
+.ad-bar.dur-8 { transition-duration: 8.0s; }
+.ad-bar.dur-9 { transition-duration: 9.0s; }
+.ad-bar.dur-10 { transition-duration: 10.0s; }
+.ad-bar.dur-11 { transition-duration: 11.0s; }
+.ad-bar.dur-12 { transition-duration: 12.0s; }
+.ad-bar.dur-13 { transition-duration: 13.0s; }
+.ad-bar.dur-14 { transition-duration: 14.0s; }
+.ad-bar.dur-15 { transition-duration: 15.0s; }
+
+/* After the at-N ladders, so it wins over any of them: same specificity, later rule. */
+.ad-bar.run { clip: rect( 0%, 0%, 100%, 0% ); }
+.ad.rtl .ad-bar.run { clip: rect( 0%, 100%, 100%, 100% ); }
