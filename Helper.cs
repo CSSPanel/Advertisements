@@ -15,11 +15,13 @@ public partial class AdvertisementsCore
 {
 	private void FetchAdvertisements()
 	{
-		// Reset the advertisements list
+		// Reset the advertisements lists
 		g_AdvertisementsList.Clear();
+		g_HudAdvertisementsList.Clear();
 
-		// Stop the timer if it's running
+		// Stop the timers if they're running
 		timer?.Kill();
+		hudTimer?.Kill();
 
 		int serverId = CurrentServerId();
 
@@ -90,15 +92,20 @@ public partial class AdvertisementsCore
 					Log($"Advertisement {id}: unreadable hud settings ({hudError}), using the defaults");
 			}
 
+			// HUD ads have a rotation and a timer of their own (Advertisements.Hud.cs). Without the strip they
+			// print in chat, so they stay in the chat rotation instead of adding a second stream of chat lines.
+			ICollection<Advertisement> list = location == "hud" && HudOn ? g_HudAdvertisementsList : g_AdvertisementsList;
+
 			// For each multiply, add the advertisement to the list
 			for (int i = 0; i < multiply; i++)
-				g_AdvertisementsList.Add(new Advertisement(id, text, location, flags) { Hud = hud });
+				list.Add(new Advertisement(id, text, location, flags) { Hud = hud });
 		}
 
 		// filter the not enabled advertisements
-		Log($"Loaded {g_AdvertisementsList.Count()} advertisements (ad * multiply).");
+		Log($"Loaded {g_AdvertisementsList.Count()} advertisements and {g_HudAdvertisementsList.Count} HUD advertisements (ad * multiply).");
 
 		timer = AddTimer(Config.Timer, Timer_Advertisements, TimerFlags.REPEAT);
+		StartHudTimer();
 	}
 
 	Advertisement? selectedAd = null;
@@ -108,16 +115,14 @@ public partial class AdvertisementsCore
 
 		if (g_AdvertisementsList == null || g_AdvertisementsList.Count < 1)
 		{
-			Log("No advertisements to display.");
+			// HUD-only servers are not "no ads": the HUD timer shows them
+			if (g_HudAdvertisementsList.Count == 0)
+				Log("No advertisements to display.");
 			return;
 		}
 
 		Random random = new();
 		selectedAd = g_AdvertisementsList.ElementAt(random.Next(0, g_AdvertisementsList.Count));
-
-		// A HUD ad in freeze time waits for the round to go live (EventRoundFreezeEnd)
-		if (HudHoldForFreezeTime(selectedAd))
-			return;
 
 		BroadcastAdvertisement(selectedAd);
 	}

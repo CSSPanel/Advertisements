@@ -32,4 +32,9 @@ public class AdvertisementHudConfig
 	/// the Retakes site panel or the buy menu.</summary>
 	[JsonPropertyName("WaitForFreezeEnd")]
 	public bool WaitForFreezeEnd { get; set; } = true;
+
+	/// <summary>Seconds between HUD ads. Their own timer and rotation, next to Timer for chat and center ads, so a
+	/// chat line and a strip can show at the same moment.</summary>
+	[JsonPropertyName("IntervalSeconds")]
+	public float IntervalSeconds { get; set; } = 20;
 }

@@ -86,12 +86,16 @@ or newer.
 ```json
 "Hud": {
   "Enabled": true,
-  "WaitForFreezeEnd": true
+  "WaitForFreezeEnd": true,
+  "IntervalSeconds": 20
 }
 ```
 
 - `Enabled` - false prints HUD ads in chat instead (so does a strip that failed to start).
 - `WaitForFreezeEnd` - a HUD ad that comes up in freeze time waits until the round goes live.
+- `IntervalSeconds` - seconds between HUD ads. They have their own rotation and timer, next to `Timer` for chat
+  and center ads, so a chat line and a strip can come at the same moment. A tick that finds the last strip still
+  on screen is skipped. With the strip off, HUD ads print in chat on the `Timer` rotation instead.
 
 ## Credits
 

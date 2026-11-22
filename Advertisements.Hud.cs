@@ -11,14 +11,32 @@ namespace Advertisements;
 /// player's text is built here with their own {NAME} and the rest, the same way the website's admin preview
 /// builds it (<see cref="AdHudFormat"/>).
 ///
-/// <para>Off (Hud.Enabled false) or failed to start: HUD ads print in chat, with their formats taken off.</para>
+/// <para><b>Their own timer.</b> HUD ads are not in the chat and center rotation: they have their own list
+/// (multiply works the same) and their own timer, every Hud.IntervalSeconds, next to the Timer one, so a chat
+/// line and a strip can come at the same moment. A tick that finds the last strip still on screen is skipped,
+/// never stacked.</para>
+///
+/// <para>Off (Hud.Enabled false) or failed to start: HUD ads print in chat, with their formats taken off, and
+/// go back into the chat rotation, so they do not become a second stream of chat lines.</para>
 /// </summary>
 public partial class AdvertisementsCore
 {
 	private AdHud? g_Hud;
 
+	/// <summary>The HUD ads' rotation: each ad as many times as its multiply, like g_AdvertisementsList.</summary>
+	readonly List<Advertisement> g_HudAdvertisementsList = [];
+	private CounterStrikeSharp.API.Modules.Timers.Timer? hudTimer;
+
 	/// <summary>A HUD ad that came up in freeze time, shown when the round goes live.</summary>
 	private Advertisement? g_PendingHudAd;
+
+	/// <summary>Server time the last strip is off the screen: its duration plus the slide in and out.</summary>
+	private float g_HudBusyUntil;
+
+	/// <summary>The strip's slide in and out, on top of the ad's duration (AdHud's EntrySeconds and ExitSeconds).</summary>
+	private const float HudTransitionSeconds = 0.7f;
+
+	private const float DefaultHudInterval = 20f;
 
 	private bool HudOn => Config.Hud.Enabled && g_Hud is { Enabled: true };
 
@@ -40,9 +58,53 @@ public partial class AdvertisementsCore
 
 	private void HudUnload()
 	{
+		hudTimer?.Kill();
+		hudTimer = null;
 		g_Hud?.Dispose();
 		g_Hud = null;
 		g_PendingHudAd = null;
+	}
+
+	/// <summary>
+	/// Starts the HUD ads' timer, from FetchAdvertisements, right after the chat one: the same lifecycle, so
+	/// css_adv_sync and a plugin reload restart both. Like the chat timer it is not stopped on map change.
+	/// </summary>
+	private void StartHudTimer()
+	{
+		hudTimer?.Kill();
+		hudTimer = null;
+
+		if (g_HudAdvertisementsList.Count == 0)
+			return;
+
+		var interval = Config.Hud.IntervalSeconds > 0 ? Config.Hud.IntervalSeconds : DefaultHudInterval;
+		hudTimer = AddTimer(Math.Max(1f, interval), Timer_HudAdvertisements, TimerFlags.REPEAT);
+	}
+
+	private void Timer_HudAdvertisements()
+	{
+		if (g_HudAdvertisementsList.Count == 0 || !HudOn)
+			return;
+
+		// The last strip is still up (an interval shorter than duration + slide): skip this tick, never stack.
+		// A busy time far ahead is from before a map change reset the clock.
+		var now = Server.CurrentTime;
+		if (now < g_HudBusyUntil && g_HudBusyUntil - now <= AdHudFormat.DurationMax + HudTransitionSeconds + 1f)
+			return;
+
+		var ad = g_HudAdvertisementsList[Random.Shared.Next(g_HudAdvertisementsList.Count)];
+
+		// In freeze time it waits for the round to go live (EventRoundFreezeEnd)
+		if (HudHoldForFreezeTime(ad))
+			return;
+
+		BroadcastHudAdvertisement(ad);
+	}
+
+	private void BroadcastHudAdvertisement(Advertisement ad)
+	{
+		g_HudBusyUntil = Server.CurrentTime + (ad.Hud ?? AdHudStyle.Default).Duration + HudTransitionSeconds;
+		BroadcastAdvertisement(ad);
 	}
 
 	/// <summary>
@@ -76,7 +138,7 @@ public partial class AdvertisementsCore
 		if (g_PendingHudAd is { } ad)
 		{
 			g_PendingHudAd = null;
-			BroadcastAdvertisement(ad);
+			BroadcastHudAdvertisement(ad);
 		}
 
 		return HookResult.Continue;
@@ -93,6 +155,7 @@ public partial class AdvertisementsCore
 	private void OnHudMapEnd()
 	{
 		g_PendingHudAd = null;
+		g_HudBusyUntil = 0;
 		g_Hud?.Clear();
 	}
 
