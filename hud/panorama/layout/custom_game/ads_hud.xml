@@ -34,9 +34,8 @@
 		  ad_r<n>_<m> hidden gap b i u             gap = a word space to its left (a Label trims its own edges)
 		              kbd                          a command: drawn as a key-cap, a black chip behind the text
 		              c-<rrggbb>                   one colour from the palette in ads_hud.css, or none
-		  ad_bar      at-0..at-19                  where the bar starts, 5% a step (none = full)
-		              dur-1..dur-15                how long it drains for, in seconds
-		              run                          drain to 0, one linear clip transition
+		  ad_bar      s0..s50                      where the bar is, 2% a step (s50 or none = full); one
+		                                           fixed 0.3s glide, a new step every 0.2s
 	-->
 	<Panel class="hud-screen" hittest="false">
 		<Panel id="AdsRoot" class="ads-root" hittest="false">

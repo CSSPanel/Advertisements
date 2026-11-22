@@ -23,6 +23,12 @@ namespace Advertisements.Hud;
 /// round restart or a map change and drops every per-viewer variable and class (PanelAction.Restored), so the
 /// remembered writes are forgotten and <see cref="Restore"/> writes the strip back, with the bar where it
 /// should be. Every timed step is a time in the viewer's record, run by <see cref="Tick"/>.</para>
+///
+/// <para><b>The bar is a clip ladder with one fixed glide.</b> ads_hud.css carries s0..s50 (2% a step) on a clip
+/// with a 0.3s linear transition that no class changes, and <see cref="TickBar"/> names the step for where the
+/// strip will be one glide from now, every <see cref="BarEverySeconds"/>. It replaced one long transition per ad
+/// (snap to at-N, then dur-N and "run" with "show"), which did not draw in game: nothing has shown a
+/// class-swapped transition-duration working there.</para>
 /// </summary>
 internal sealed class AdHud : IDisposable
 {
@@ -36,16 +42,25 @@ internal sealed class AdHud : IDisposable
 	private const float ExitSeconds = 0.35f;
 
 	/// <summary>
-	/// From un-collapsing (and snapping the bar back) to "show" and "run". A class turned off and on again
-	/// sooner than about 0.3s does not reach the client, and the slide needs its resting offset seen first.
+	/// From un-collapsing (and sending the bar to where it starts) to "show". A class turned off and on again
+	/// sooner than about 0.3s does not reach the client, the slide needs its resting offset seen first, and the
+	/// bar's glide to its start has played by then.
 	/// </summary>
 	private const float EntrySeconds = 0.35f;
 
-	/// <summary>The at-N classes: where the bar starts, in 5% steps. at-20 (full) is the stylesheet's default.</summary>
-	private const int BarSteps = 20;
+	/// <summary>The s-N classes: where the bar is, 2% a step. s50 (full) is also the stylesheet's default, so
+	/// full is written as no step at all.</summary>
+	private const int BarSteps = 50;
 
-	/// <summary>The dur-N classes ads_hud.css defines, in seconds.</summary>
-	private const int MaxBarSeconds = 15;
+	/// <summary>
+	/// The .ad-bar transition-duration in ads_hud.css. Every step is aimed this far ahead of the clock, so the
+	/// fill arrives where the strip is instead of trailing it, and reaches s0 as the strip leaves.
+	/// </summary>
+	private const float GlideSeconds = 0.3f;
+
+	/// <summary>How often the bar gets its next step. Under <see cref="GlideSeconds"/>, so the fill never stops
+	/// between steps; Tick runs every 0.1s.</summary>
+	private const float BarEverySeconds = 0.2f;
 
 	/// <summary>A restored strip with less than this left is not brought back.</summary>
 	private const float MinRestoreSeconds = 1.0f;
@@ -69,11 +84,14 @@ internal sealed class AdHud : IDisposable
 		/// <summary>How long the strip stays once "show" is on: the ad's duration, or what was left after a restore.</summary>
 		public float Seconds;
 
+		/// <summary>When the bar may get its next step.</summary>
+		public float BarNextAt;
+
 		// What was written to this viewer's panel. Unknown entries are written; known ones only when they change.
 		public readonly Dictionary<string, string> Vars = [];
 		public readonly Dictionary<(string Id, string Class), bool> Classes = [];
 
-		/// <summary>One-of-a-group classes (position, accent, icon, a run's colour, the bar's dur-N and at-N): the one that is on.</summary>
+		/// <summary>One-of-a-group classes (position, accent, icon, a run's colour, the bar's step): the one that is on.</summary>
 		public readonly Dictionary<(string Id, string Group), string> Groups = [];
 
 		public void Forget()
@@ -237,7 +255,7 @@ internal sealed class AdHud : IDisposable
 			case Phase.Idle:
 			case Phase.Entering:
 				// Not on screen yet: write the new one in its place
-				Prepare(player, viewer, content, BarSteps, content.Duration, now);
+				Prepare(player, viewer, content, 1f, content.Duration, now);
 				break;
 
 			case Phase.Shown:
@@ -254,15 +272,16 @@ internal sealed class AdHud : IDisposable
 	}
 
 	/// <summary>
-	/// Writes an ad onto the strip while it is out of sight, snaps the bar to where it starts and un-collapses
-	/// the strip; <see cref="Tick"/> turns "show" and the bar on after <see cref="EntrySeconds"/>.
+	/// Writes an ad onto the strip while it is out of sight, sends the bar to where it starts (<paramref name="bar"/>,
+	/// 1 = full) and un-collapses the strip; <see cref="Tick"/> turns "show" on after <see cref="EntrySeconds"/>,
+	/// and the bar moves from there.
 	/// </summary>
-	private void Prepare(CCSPlayerController player, Viewer viewer, AdHudContent content, int barAt, float seconds, float now)
+	private void Prepare(CCSPlayerController player, Viewer viewer, AdHudContent content, float bar, float seconds, float now)
 	{
 		viewer.Content = content;
 		viewer.Seconds = seconds;
 
-		BarSnap(player, viewer, barAt);
+		BarTo(player, viewer, bar);
 		Write(player, viewer, content);
 		Cls(player, viewer, StripId, "show", false);
 		Cls(player, viewer, StripId, "hidden", false);
@@ -303,20 +322,19 @@ internal sealed class AdHud : IDisposable
 			case Phase.Shown when viewer.Content != null && viewer.HideAt - now - EntrySeconds >= MinRestoreSeconds:
 			{
 				var left = viewer.HideAt - now - EntrySeconds;
-				var at = (int)Math.Round(Math.Clamp(left / Math.Max(viewer.Content.Duration, 1), 0f, 1f) * BarSteps);
-				Prepare(player, viewer, viewer.Content, at, left, now);
+				Prepare(player, viewer, viewer.Content, left / Math.Max(viewer.Content.Duration, 1), left, now);
 				return;
 			}
 
 			case Phase.Entering when viewer.Content != null:
-				Prepare(player, viewer, viewer.Content, BarSteps, viewer.Seconds, now);
+				Prepare(player, viewer, viewer.Content, viewer.Seconds / Math.Max(viewer.Content.Duration, 1), viewer.Seconds, now);
 				return;
 
 			case Phase.Leaving when viewer.Next != null:
 			{
 				var next = viewer.Next;
 				viewer.Next = null;
-				Prepare(player, viewer, next, BarSteps, next.Duration, now);
+				Prepare(player, viewer, next, 1f, next.Duration, now);
 				return;
 			}
 		}
@@ -351,21 +369,26 @@ internal sealed class AdHud : IDisposable
 			{
 				case Phase.Entering when now >= viewer.ShowAt:
 					Cls(player, viewer, StripId, "show", true);
-					BarRun(player, viewer, viewer.Seconds);
 					viewer.Phase = Phase.Shown;
 					viewer.ShowAt = -1;
 					viewer.HideAt = now + viewer.Seconds;
+					viewer.BarNextAt = 0;
+					TickBar(player, viewer, now);
 					break;
 
 				case Phase.Shown when now >= viewer.HideAt:
 					Leave(player, viewer, now);
 					break;
 
+				case Phase.Shown:
+					TickBar(player, viewer, now);
+					break;
+
 				case Phase.Leaving when now >= viewer.CollapseAt:
 					if (viewer.Next is { } next)
 					{
 						viewer.Next = null;
-						Prepare(player, viewer, next, BarSteps, next.Duration, now);
+						Prepare(player, viewer, next, 1f, next.Duration, now);
 						break;
 					}
 
@@ -373,8 +396,8 @@ internal sealed class AdHud : IDisposable
 					viewer.Content = null;
 					viewer.CollapseAt = -1;
 					Cls(player, viewer, StripId, "hidden", true);
-					// Out of sight now, so the bar can go back to full for the next ad
-					BarSnap(player, viewer, BarSteps);
+					// Out of sight now, so the bar can glide back to full for the next ad
+					BarTo(player, viewer, 1f);
 					break;
 			}
 		}
@@ -383,22 +406,26 @@ internal sealed class AdHud : IDisposable
 	// ------------------------------------------------------------------ the bar
 
 	/// <summary>
-	/// Puts the bar at a step with no transition. The duration comes off with "run" in the same write, so the
-	/// bar snaps instead of running back to full.
+	/// The drain: every <see cref="BarEverySeconds"/>, the step for where the strip will be one glide from now.
+	/// The denominator is the ad's own duration, so a strip restored part way keeps a part-full bar.
 	/// </summary>
-	private void BarSnap(CCSPlayerController player, Viewer viewer, int at)
+	private void TickBar(CCSPlayerController player, Viewer viewer, float now)
 	{
-		Group(player, viewer, BarId, "dur", null);
-		Cls(player, viewer, BarId, "run", false);
-		Group(player, viewer, BarId, "at", at >= BarSteps ? null : $"at-{Math.Max(0, at)}");
+		if (viewer.Content == null || now < viewer.BarNextAt)
+			return;
+
+		viewer.BarNextAt = now + BarEverySeconds;
+		BarTo(player, viewer, (viewer.HideAt - now - GlideSeconds) / Math.Max(viewer.Content.Duration, 1));
 	}
 
-	/// <summary>The drain: one linear clip transition to 0 over the time the strip stays.</summary>
-	private void BarRun(CCSPlayerController player, Viewer viewer, float seconds)
+	/// <summary>
+	/// The s-N step for <paramref name="fraction"/> (1 = full, written as no step), the old one off in the same
+	/// update. Only a change is written.
+	/// </summary>
+	private void BarTo(CCSPlayerController player, Viewer viewer, float fraction)
 	{
-		var dur = Math.Clamp((int)Math.Round(seconds), 1, MaxBarSeconds);
-		Group(player, viewer, BarId, "dur", $"dur-{dur}");
-		Cls(player, viewer, BarId, "run", true);
+		var step = Math.Clamp((int)Math.Round(fraction * BarSteps, MidpointRounding.AwayFromZero), 0, BarSteps);
+		Group(player, viewer, BarId, "s", step >= BarSteps ? null : $"s{step}");
 	}
 
 	// ------------------------------------------------------------------ drawing

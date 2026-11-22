@@ -19,9 +19,11 @@
     Hebrew line's pieces in reverse and the line is right-aligned here. The icon and the edge move to the
     right, and the bar drains towards the right.
 
-    THE BAR is one linear clip transition, as in afk_hud. The plugin snaps it (no dur-N on) to where it starts
-    - full, or at-N when a strip comes back part way after a respawn - and a moment later adds dur-N and
-    "run" together, and the client drains it to 0 on its own.
+    THE BAR is a clip ladder with one fixed glide, as in afk_hud: s0..s50 (2% a step) and a 0.3s linear
+    transition that no class changes. The plugin names the step for where the strip will be one glide from
+    now, every 0.2s, so the fill keeps moving between steps. It replaced one long transition (snap to at-N,
+    then dur-N and "run" together), which did not draw in game: nothing has shown a class-swapped
+    transition-duration working there.
 
     UNVERIFIED IN GAME, each with a harmless failure:
       - max-width on the strip and the title: the plugin keeps lines narrower anyway; without it a long title
@@ -50,7 +52,7 @@
     border-left: 2px solid #f7783c;
     border-right: 0px solid #f7783c;
     world-blur: gaussian(8.0);
-    background-color: gradient(linear, 0% 0%, 0% 100%, from(#12171ee2), to(#0b0f14ec));
+    background-color: gradient(linear, 0% 0%, 0% 100%, from(#12171ec6), to(#0b0f14d0));
 
     opacity: 0;
     blur: gaussian(7.0);
@@ -163,14 +165,14 @@
     width: 100%;
     height: 2px;
 }
-/* Zero by default, so taking "run" and the dur-N class off snaps it back instead of animating. */
+/* Full by default. One fixed glide, which no class changes: the steps are in "bar steps" below. */
 .ad-bar {
     width: 100%;
     height: 100%;
     background-color: #f7783c80;
     clip: rect( 0%, 100%, 100%, 0% );
     transition-property: clip;
-    transition-duration: 0.0s;
+    transition-duration: 0.3s;
     transition-timing-function: linear;
 }
 
@@ -277,67 +279,108 @@
 
 /* ------------------------------------------------------------------ bar steps */
 
-/* Where it starts, left to right. */
-.ad-bar.at-0 { clip: rect( 0%, 0%, 100%, 0% ); }
-.ad-bar.at-1 { clip: rect( 0%, 5%, 100%, 0% ); }
-.ad-bar.at-2 { clip: rect( 0%, 10%, 100%, 0% ); }
-.ad-bar.at-3 { clip: rect( 0%, 15%, 100%, 0% ); }
-.ad-bar.at-4 { clip: rect( 0%, 20%, 100%, 0% ); }
-.ad-bar.at-5 { clip: rect( 0%, 25%, 100%, 0% ); }
-.ad-bar.at-6 { clip: rect( 0%, 30%, 100%, 0% ); }
-.ad-bar.at-7 { clip: rect( 0%, 35%, 100%, 0% ); }
-.ad-bar.at-8 { clip: rect( 0%, 40%, 100%, 0% ); }
-.ad-bar.at-9 { clip: rect( 0%, 45%, 100%, 0% ); }
-.ad-bar.at-10 { clip: rect( 0%, 50%, 100%, 0% ); }
-.ad-bar.at-11 { clip: rect( 0%, 55%, 100%, 0% ); }
-.ad-bar.at-12 { clip: rect( 0%, 60%, 100%, 0% ); }
-.ad-bar.at-13 { clip: rect( 0%, 65%, 100%, 0% ); }
-.ad-bar.at-14 { clip: rect( 0%, 70%, 100%, 0% ); }
-.ad-bar.at-15 { clip: rect( 0%, 75%, 100%, 0% ); }
-.ad-bar.at-16 { clip: rect( 0%, 80%, 100%, 0% ); }
-.ad-bar.at-17 { clip: rect( 0%, 85%, 100%, 0% ); }
-.ad-bar.at-18 { clip: rect( 0%, 90%, 100%, 0% ); }
-.ad-bar.at-19 { clip: rect( 0%, 95%, 100%, 0% ); }
+/* Where it is, left to right: 2% a step, s50 full (also the default, with no step on). */
+.ad-bar.s0 { clip: rect( 0%, 0%, 100%, 0% ); }
+.ad-bar.s1 { clip: rect( 0%, 2%, 100%, 0% ); }
+.ad-bar.s2 { clip: rect( 0%, 4%, 100%, 0% ); }
+.ad-bar.s3 { clip: rect( 0%, 6%, 100%, 0% ); }
+.ad-bar.s4 { clip: rect( 0%, 8%, 100%, 0% ); }
+.ad-bar.s5 { clip: rect( 0%, 10%, 100%, 0% ); }
+.ad-bar.s6 { clip: rect( 0%, 12%, 100%, 0% ); }
+.ad-bar.s7 { clip: rect( 0%, 14%, 100%, 0% ); }
+.ad-bar.s8 { clip: rect( 0%, 16%, 100%, 0% ); }
+.ad-bar.s9 { clip: rect( 0%, 18%, 100%, 0% ); }
+.ad-bar.s10 { clip: rect( 0%, 20%, 100%, 0% ); }
+.ad-bar.s11 { clip: rect( 0%, 22%, 100%, 0% ); }
+.ad-bar.s12 { clip: rect( 0%, 24%, 100%, 0% ); }
+.ad-bar.s13 { clip: rect( 0%, 26%, 100%, 0% ); }
+.ad-bar.s14 { clip: rect( 0%, 28%, 100%, 0% ); }
+.ad-bar.s15 { clip: rect( 0%, 30%, 100%, 0% ); }
+.ad-bar.s16 { clip: rect( 0%, 32%, 100%, 0% ); }
+.ad-bar.s17 { clip: rect( 0%, 34%, 100%, 0% ); }
+.ad-bar.s18 { clip: rect( 0%, 36%, 100%, 0% ); }
+.ad-bar.s19 { clip: rect( 0%, 38%, 100%, 0% ); }
+.ad-bar.s20 { clip: rect( 0%, 40%, 100%, 0% ); }
+.ad-bar.s21 { clip: rect( 0%, 42%, 100%, 0% ); }
+.ad-bar.s22 { clip: rect( 0%, 44%, 100%, 0% ); }
+.ad-bar.s23 { clip: rect( 0%, 46%, 100%, 0% ); }
+.ad-bar.s24 { clip: rect( 0%, 48%, 100%, 0% ); }
+.ad-bar.s25 { clip: rect( 0%, 50%, 100%, 0% ); }
+.ad-bar.s26 { clip: rect( 0%, 52%, 100%, 0% ); }
+.ad-bar.s27 { clip: rect( 0%, 54%, 100%, 0% ); }
+.ad-bar.s28 { clip: rect( 0%, 56%, 100%, 0% ); }
+.ad-bar.s29 { clip: rect( 0%, 58%, 100%, 0% ); }
+.ad-bar.s30 { clip: rect( 0%, 60%, 100%, 0% ); }
+.ad-bar.s31 { clip: rect( 0%, 62%, 100%, 0% ); }
+.ad-bar.s32 { clip: rect( 0%, 64%, 100%, 0% ); }
+.ad-bar.s33 { clip: rect( 0%, 66%, 100%, 0% ); }
+.ad-bar.s34 { clip: rect( 0%, 68%, 100%, 0% ); }
+.ad-bar.s35 { clip: rect( 0%, 70%, 100%, 0% ); }
+.ad-bar.s36 { clip: rect( 0%, 72%, 100%, 0% ); }
+.ad-bar.s37 { clip: rect( 0%, 74%, 100%, 0% ); }
+.ad-bar.s38 { clip: rect( 0%, 76%, 100%, 0% ); }
+.ad-bar.s39 { clip: rect( 0%, 78%, 100%, 0% ); }
+.ad-bar.s40 { clip: rect( 0%, 80%, 100%, 0% ); }
+.ad-bar.s41 { clip: rect( 0%, 82%, 100%, 0% ); }
+.ad-bar.s42 { clip: rect( 0%, 84%, 100%, 0% ); }
+.ad-bar.s43 { clip: rect( 0%, 86%, 100%, 0% ); }
+.ad-bar.s44 { clip: rect( 0%, 88%, 100%, 0% ); }
+.ad-bar.s45 { clip: rect( 0%, 90%, 100%, 0% ); }
+.ad-bar.s46 { clip: rect( 0%, 92%, 100%, 0% ); }
+.ad-bar.s47 { clip: rect( 0%, 94%, 100%, 0% ); }
+.ad-bar.s48 { clip: rect( 0%, 96%, 100%, 0% ); }
+.ad-bar.s49 { clip: rect( 0%, 98%, 100%, 0% ); }
+.ad-bar.s50 { clip: rect( 0%, 100%, 100%, 0% ); }
 
-/* Right to left it drains towards the right edge. */
-.ad.rtl .ad-bar.at-0 { clip: rect( 0%, 100%, 100%, 100% ); }
-.ad.rtl .ad-bar.at-1 { clip: rect( 0%, 100%, 100%, 95% ); }
-.ad.rtl .ad-bar.at-2 { clip: rect( 0%, 100%, 100%, 90% ); }
-.ad.rtl .ad-bar.at-3 { clip: rect( 0%, 100%, 100%, 85% ); }
-.ad.rtl .ad-bar.at-4 { clip: rect( 0%, 100%, 100%, 80% ); }
-.ad.rtl .ad-bar.at-5 { clip: rect( 0%, 100%, 100%, 75% ); }
-.ad.rtl .ad-bar.at-6 { clip: rect( 0%, 100%, 100%, 70% ); }
-.ad.rtl .ad-bar.at-7 { clip: rect( 0%, 100%, 100%, 65% ); }
-.ad.rtl .ad-bar.at-8 { clip: rect( 0%, 100%, 100%, 60% ); }
-.ad.rtl .ad-bar.at-9 { clip: rect( 0%, 100%, 100%, 55% ); }
-.ad.rtl .ad-bar.at-10 { clip: rect( 0%, 100%, 100%, 50% ); }
-.ad.rtl .ad-bar.at-11 { clip: rect( 0%, 100%, 100%, 45% ); }
-.ad.rtl .ad-bar.at-12 { clip: rect( 0%, 100%, 100%, 40% ); }
-.ad.rtl .ad-bar.at-13 { clip: rect( 0%, 100%, 100%, 35% ); }
-.ad.rtl .ad-bar.at-14 { clip: rect( 0%, 100%, 100%, 30% ); }
-.ad.rtl .ad-bar.at-15 { clip: rect( 0%, 100%, 100%, 25% ); }
-.ad.rtl .ad-bar.at-16 { clip: rect( 0%, 100%, 100%, 20% ); }
-.ad.rtl .ad-bar.at-17 { clip: rect( 0%, 100%, 100%, 15% ); }
-.ad.rtl .ad-bar.at-18 { clip: rect( 0%, 100%, 100%, 10% ); }
-.ad.rtl .ad-bar.at-19 { clip: rect( 0%, 100%, 100%, 5% ); }
-
-/* How long it drains for. Durations are 3-15s; a strip restored part way can have 1 or 2 left. */
-.ad-bar.dur-1 { transition-duration: 1.0s; }
-.ad-bar.dur-2 { transition-duration: 2.0s; }
-.ad-bar.dur-3 { transition-duration: 3.0s; }
-.ad-bar.dur-4 { transition-duration: 4.0s; }
-.ad-bar.dur-5 { transition-duration: 5.0s; }
-.ad-bar.dur-6 { transition-duration: 6.0s; }
-.ad-bar.dur-7 { transition-duration: 7.0s; }
-.ad-bar.dur-8 { transition-duration: 8.0s; }
-.ad-bar.dur-9 { transition-duration: 9.0s; }
-.ad-bar.dur-10 { transition-duration: 10.0s; }
-.ad-bar.dur-11 { transition-duration: 11.0s; }
-.ad-bar.dur-12 { transition-duration: 12.0s; }
-.ad-bar.dur-13 { transition-duration: 13.0s; }
-.ad-bar.dur-14 { transition-duration: 14.0s; }
-.ad-bar.dur-15 { transition-duration: 15.0s; }
-
-/* After the at-N ladders, so it wins over any of them: same specificity, later rule. */
-.ad-bar.run { clip: rect( 0%, 0%, 100%, 0% ); }
-.ad.rtl .ad-bar.run { clip: rect( 0%, 100%, 100%, 100% ); }
+/* Right to left it drains towards the right edge. After the ladder above, and more specific. */
+.ad.rtl .ad-bar.s0 { clip: rect( 0%, 100%, 100%, 100% ); }
+.ad.rtl .ad-bar.s1 { clip: rect( 0%, 100%, 100%, 98% ); }
+.ad.rtl .ad-bar.s2 { clip: rect( 0%, 100%, 100%, 96% ); }
+.ad.rtl .ad-bar.s3 { clip: rect( 0%, 100%, 100%, 94% ); }
+.ad.rtl .ad-bar.s4 { clip: rect( 0%, 100%, 100%, 92% ); }
+.ad.rtl .ad-bar.s5 { clip: rect( 0%, 100%, 100%, 90% ); }
+.ad.rtl .ad-bar.s6 { clip: rect( 0%, 100%, 100%, 88% ); }
+.ad.rtl .ad-bar.s7 { clip: rect( 0%, 100%, 100%, 86% ); }
+.ad.rtl .ad-bar.s8 { clip: rect( 0%, 100%, 100%, 84% ); }
+.ad.rtl .ad-bar.s9 { clip: rect( 0%, 100%, 100%, 82% ); }
+.ad.rtl .ad-bar.s10 { clip: rect( 0%, 100%, 100%, 80% ); }
+.ad.rtl .ad-bar.s11 { clip: rect( 0%, 100%, 100%, 78% ); }
+.ad.rtl .ad-bar.s12 { clip: rect( 0%, 100%, 100%, 76% ); }
+.ad.rtl .ad-bar.s13 { clip: rect( 0%, 100%, 100%, 74% ); }
+.ad.rtl .ad-bar.s14 { clip: rect( 0%, 100%, 100%, 72% ); }
+.ad.rtl .ad-bar.s15 { clip: rect( 0%, 100%, 100%, 70% ); }
+.ad.rtl .ad-bar.s16 { clip: rect( 0%, 100%, 100%, 68% ); }
+.ad.rtl .ad-bar.s17 { clip: rect( 0%, 100%, 100%, 66% ); }
+.ad.rtl .ad-bar.s18 { clip: rect( 0%, 100%, 100%, 64% ); }
+.ad.rtl .ad-bar.s19 { clip: rect( 0%, 100%, 100%, 62% ); }
+.ad.rtl .ad-bar.s20 { clip: rect( 0%, 100%, 100%, 60% ); }
+.ad.rtl .ad-bar.s21 { clip: rect( 0%, 100%, 100%, 58% ); }
+.ad.rtl .ad-bar.s22 { clip: rect( 0%, 100%, 100%, 56% ); }
+.ad.rtl .ad-bar.s23 { clip: rect( 0%, 100%, 100%, 54% ); }
+.ad.rtl .ad-bar.s24 { clip: rect( 0%, 100%, 100%, 52% ); }
+.ad.rtl .ad-bar.s25 { clip: rect( 0%, 100%, 100%, 50% ); }
+.ad.rtl .ad-bar.s26 { clip: rect( 0%, 100%, 100%, 48% ); }
+.ad.rtl .ad-bar.s27 { clip: rect( 0%, 100%, 100%, 46% ); }
+.ad.rtl .ad-bar.s28 { clip: rect( 0%, 100%, 100%, 44% ); }
+.ad.rtl .ad-bar.s29 { clip: rect( 0%, 100%, 100%, 42% ); }
+.ad.rtl .ad-bar.s30 { clip: rect( 0%, 100%, 100%, 40% ); }
+.ad.rtl .ad-bar.s31 { clip: rect( 0%, 100%, 100%, 38% ); }
+.ad.rtl .ad-bar.s32 { clip: rect( 0%, 100%, 100%, 36% ); }
+.ad.rtl .ad-bar.s33 { clip: rect( 0%, 100%, 100%, 34% ); }
+.ad.rtl .ad-bar.s34 { clip: rect( 0%, 100%, 100%, 32% ); }
+.ad.rtl .ad-bar.s35 { clip: rect( 0%, 100%, 100%, 30% ); }
+.ad.rtl .ad-bar.s36 { clip: rect( 0%, 100%, 100%, 28% ); }
+.ad.rtl .ad-bar.s37 { clip: rect( 0%, 100%, 100%, 26% ); }
+.ad.rtl .ad-bar.s38 { clip: rect( 0%, 100%, 100%, 24% ); }
+.ad.rtl .ad-bar.s39 { clip: rect( 0%, 100%, 100%, 22% ); }
+.ad.rtl .ad-bar.s40 { clip: rect( 0%, 100%, 100%, 20% ); }
+.ad.rtl .ad-bar.s41 { clip: rect( 0%, 100%, 100%, 18% ); }
+.ad.rtl .ad-bar.s42 { clip: rect( 0%, 100%, 100%, 16% ); }
+.ad.rtl .ad-bar.s43 { clip: rect( 0%, 100%, 100%, 14% ); }
+.ad.rtl .ad-bar.s44 { clip: rect( 0%, 100%, 100%, 12% ); }
+.ad.rtl .ad-bar.s45 { clip: rect( 0%, 100%, 100%, 10% ); }
+.ad.rtl .ad-bar.s46 { clip: rect( 0%, 100%, 100%, 8% ); }
+.ad.rtl .ad-bar.s47 { clip: rect( 0%, 100%, 100%, 6% ); }
+.ad.rtl .ad-bar.s48 { clip: rect( 0%, 100%, 100%, 4% ); }
+.ad.rtl .ad-bar.s49 { clip: rect( 0%, 100%, 100%, 2% ); }
+.ad.rtl .ad-bar.s50 { clip: rect( 0%, 100%, 100%, 0% ); }
