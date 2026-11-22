@@ -434,6 +434,7 @@ internal sealed class AdHud : IDisposable
 				Cls(player, viewer, id, "b", run.Bold);
 				Cls(player, viewer, id, "i", run.Italic);
 				Cls(player, viewer, id, "u", run.Underline);
+				Cls(player, viewer, id, "kbd", run.Kbd);
 				Group(player, viewer, id, "c", run.ColorClass);
 			}
 		}

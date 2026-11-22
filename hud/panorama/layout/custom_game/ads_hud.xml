@@ -21,7 +21,7 @@
 
 		THE TEXT is 4 lines of 8 Labels each, since a Label takes no markup (the html attribute is
 		not on the CustomHud whitelist). The plugin breaks the ad into lines and styled pieces (AdHudText.cs)
-		and writes one piece per Label: bold, a colour, a command in the accent colour.
+		and writes one piece per Label: bold, a colour, a command as a key-cap.
 
 		DIALOG VARIABLES
 		  ad_title                 the title (big strip only)
@@ -32,6 +32,7 @@
 		              ic-info ic-star ic-trophy ic-news ic-globe ic-warning no-icon | big | rtl
 		  ad_l<n>     hidden                       an unused line
 		  ad_r<n>_<m> hidden gap b i u             gap = a word space to its left (a Label trims its own edges)
+		              kbd                          a command: drawn as a key-cap, a black chip behind the text
 		              c-<rrggbb>                   one colour from the palette in ads_hud.css, or none
 		  ad_bar      at-0..at-19                  where the bar starts, 5% a step (none = full)
 		              dur-1..dur-15                how long it drains for, in seconds

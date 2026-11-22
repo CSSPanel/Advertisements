@@ -6,10 +6,12 @@
 
     One strip per player, over the chat (pos-chat, sliding in from the left) or under the score (pos-top,
     sliding down). It fades in with a blur and leaves the same way when "show" comes off. The accent colours
-    the edge, the icon, the bar and any command in the text.
+    the edge, the icon, the bar and any command in the text. A command ({{cmd:!vip}}) is a key-cap: bold
+    mono text in the accent colour on a black chip.
 
     THE TEXT is a pool of Labels, 4 lines of 8 (see ads_hud.xml): a Label has no spans, so every bold word or
-    coloured command is its own Label, and the plugin decides where a line ends. A Label trims the spaces at
+    command is its own Label, and the plugin decides where a line ends. The plugin counts a key-cap's padding,
+    border and margin (KbdChrome in AdHudText.cs) when it measures a line: change them together. A Label trims the spaces at
     its edges, so a word space between two of them is the "gap" margin. Colours are a fixed palette of c-rrggbb
     classes (the accents, the chat colour tags, white for bold); the plugin picks the nearest for any other.
 
@@ -138,6 +140,22 @@
 .ad-run.b { font-weight: bold; }
 .ad-run.i { font-style: italic; }
 .ad-run.u { text-decoration: underline; }
+
+/* A command, as a key-cap: a black chip behind bold mono text, the colour from its c- class (the accent).
+   18px tall with the border, the same as a line, so a chip never makes its line taller. The 1px margin keeps
+   it off a word that touches it ("!guns."); a word space before it is the gap plus that margin. */
+.ad-run.kbd {
+    font-family: Stratum2 Mono;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 15px;
+    padding: 1px 5px 0px 5px;
+    margin: 0px 1px 0px 1px;
+    vertical-align: center;
+    background-color: #050608;
+    border: 1px solid #ffffff24;
+}
+.ad-run.kbd.gap { margin-left: 5px; }
 
 /* ------------------------------------------------------------------ the bar */
 

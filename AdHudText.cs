@@ -98,8 +98,8 @@ public sealed class AdHudStyle
 /// sanitizeAdHudHtml), so the strip says what the admin preview says. Keep the two in step: a change to the
 /// formats there is a change here.
 ///
-///   Formats mode   {Color} tags and {VARIABLES} as in chat ads, plus {{b:text}}, {{cmd:!vip}} (the accent
-///                  colour, bold), {{accent:text}} and {{br}}
+///   Formats mode   {Color} tags and {VARIABLES} as in chat ads, plus {{b:text}}, {{cmd:!vip}} (a key-cap:
+///                  the command bold in the accent colour on a black chip), {{accent:text}} and {{br}}
 ///   HTML mode      only b, i, u, br and font color="#hex" are kept; {VARIABLES} are still replaced
 ///
 /// <para>The website's result is HTML, but a custom_hud_layout Label takes no markup (the html attribute is
@@ -205,7 +205,11 @@ public static class AdHudFormat
 	/// adHudHtml: the strip's text as the website's HTML. <paramref name="variables"/> fill {NAME} and the rest;
 	/// an unknown one is left as written.
 	/// </summary>
-	public static string ToHtml(string text, string accentName, bool html, IReadOnlyDictionary<string, string> variables)
+	/// <param name="kbd">
+	/// Also wrap each {{cmd:}} in a &lt;kbd&gt;, inside its font and b, so the strip can draw it as a key-cap.
+	/// Off, the output is exactly the website's.
+	/// </param>
+	public static string ToHtml(string text, string accentName, bool html, IReadOnlyDictionary<string, string> variables, bool kbd = false)
 	{
 		var accent = Accents.TryGetValue(accentName, out var a) ? a : Accents["orange"];
 		var withVars = Variable.Replace(text, m => variables.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value);
@@ -218,7 +222,9 @@ public static class AdHudFormat
 		// {{formats}} take plain text only: a } ends them, so a {Color} tag cannot sit inside one
 		output = Br.Replace(output, "<br>");
 		output = Bold.Replace(output, m => $"<b>{m.Groups[1].Value}</b>");
-		output = Cmd.Replace(output, m => $"<font color=\"{accent}\"><b>{m.Groups[1].Value}</b></font>");
+		output = Cmd.Replace(output, m => kbd
+			? $"<font color=\"{accent}\"><b><kbd>{m.Groups[1].Value}</kbd></b></font>"
+			: $"<font color=\"{accent}\"><b>{m.Groups[1].Value}</b></font>");
 		output = AccentText.Replace(output, m => $"<font color=\"{accent}\">{m.Groups[1].Value}</font>");
 
 		// {Color} tags: each one colours the text up to the next tag
@@ -239,7 +245,8 @@ public static class AdHudFormat
 
 /// <summary>How one piece of the strip's text is drawn.</summary>
 /// <param name="Color">"#rrggbb" from a font tag, or null for the strip's text colour.</param>
-public readonly record struct AdHudPieceStyle(string? Color, bool Bold, bool Italic, bool Underline);
+/// <param name="Kbd">0, or which {{cmd:}} this is (1, 2...): each command is its own key-cap, never merged with the next.</param>
+public readonly record struct AdHudPieceStyle(string? Color, bool Bold, bool Italic, bool Underline, int Kbd = 0);
 
 /// <summary>A piece of text in one style, or a line break.</summary>
 public readonly record struct AdHudPiece(string Text, AdHudPieceStyle Style, bool Break)
@@ -250,7 +257,8 @@ public readonly record struct AdHudPiece(string Text, AdHudPieceStyle Style, boo
 /// <summary>One Label on the strip.</summary>
 /// <param name="ColorClass">The c-rrggbb class from the layout's palette, or null for the strip's text colour.</param>
 /// <param name="Gap">A word space to its left, as a margin: a Label trims the spaces at its own edges.</param>
-public sealed record AdHudRun(string Text, string? ColorClass, bool Bold, bool Italic, bool Underline, bool Gap);
+/// <param name="Kbd">A command: drawn as a key-cap, a black chip behind the text.</param>
+public sealed record AdHudRun(string Text, string? ColorClass, bool Bold, bool Italic, bool Underline, bool Gap, bool Kbd);
 
 /// <summary>Everything one player's strip shows for one ad.</summary>
 public sealed class AdHudContent
@@ -302,6 +310,13 @@ public static class AdHudLayout
 	private const float FontPx = 13.5f;
 	private const float BoldFactor = 1.06f;
 
+	/// <summary>The key-cap (.ad-run.kbd): Stratum2 Mono 12px, rounded up to 0.62em a glyph.</summary>
+	private const float KbdFontPx = 12f;
+	private const float KbdEm = 0.62f;
+
+	/// <summary>A key-cap's own width on top of its text: 5px padding and a 1px border each side, 1px margin each side.</summary>
+	private const float KbdChrome = 2 * (5f + 1f + 1f);
+
 	/// <summary>
 	/// The colours the layout has a c- class for: the 7 accents, the chat colours, white for bold, the strip's
 	/// own text colour, and two common HTML ones. A font colour outside the list takes the nearest.
@@ -314,12 +329,12 @@ public static class AdHudLayout
 		"ffffff", "d7dce1", "00ffff", "ff69b4",
 	];
 
-	private static readonly Regex Tokens = new(@"<(\/?)(b|i|u|br|font)(?:\s+color=""(#[0-9a-f]{6})"")?>",
+	private static readonly Regex Tokens = new(@"<(\/?)(b|i|u|br|font|kbd)(?:\s+color=""(#[0-9a-f]{6})"")?>",
 		RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
 	public static AdHudContent Build(string text, AdHudStyle style, IReadOnlyDictionary<string, string> variables)
 	{
-		var html = AdHudFormat.ToHtml(text, style.Accent, style.Html, variables);
+		var html = AdHudFormat.ToHtml(text, style.Accent, style.Html, variables, kbd: true);
 		var pieces = Parse(html);
 
 		// The title is plain text on the website too; only {VARIABLES} are filled in
@@ -356,13 +371,15 @@ public static class AdHudLayout
 	/// <summary>
 	/// The admin preview's renderLabel: b, i, u, br and font color, and nothing else. A closing tag closes the
 	/// nearest open tag of its name and everything opened inside it; tags left open still style their text.
-	/// A newline in the text is a line break too, as the preview draws it (pre-wrap).
+	/// A newline in the text is a line break too, as the preview draws it (pre-wrap). Plus kbd, which only
+	/// <see cref="AdHudFormat.ToHtml"/> writes (for {{cmd:}}): HTML mode's filter drops it.
 	/// </summary>
 	public static List<AdHudPiece> Parse(string html)
 	{
 		var pieces = new List<AdHudPiece>();
 		var stack = new List<(string Tag, string? Color)>();
 		var last = 0;
+		var commands = 0;
 
 		void Emit(string raw)
 		{
@@ -398,7 +415,8 @@ public static class AdHudLayout
 
 			if (!closing)
 			{
-				stack.Add((tag, m.Groups[3].Success ? m.Groups[3].Value : null));
+				// A kbd carries its number where a font carries its colour, so StyleOf can tell two commands apart
+				stack.Add((tag, tag == "kbd" ? (++commands).ToString() : m.Groups[3].Success ? m.Groups[3].Value : null));
 				continue;
 			}
 
@@ -415,6 +433,7 @@ public static class AdHudLayout
 	{
 		string? color = null;
 		bool bold = false, italic = false, underline = false;
+		var kbd = 0;
 
 		foreach (var (tag, c) in stack)
 		{
@@ -425,10 +444,11 @@ public static class AdHudLayout
 				case "u": underline = true; break;
 				// The innermost font with a colour wins; a bare <font> inherits
 				case "font" when c != null: color = c; break;
+				case "kbd": kbd = int.Parse(c!); break;
 			}
 		}
 
-		return new AdHudPieceStyle(color, bold, italic, underline);
+		return new AdHudPieceStyle(color, bold, italic, underline, kbd);
 	}
 
 	private static string Plain(List<AdHudPiece> pieces)
@@ -443,7 +463,7 @@ public static class AdHudLayout
 	// ------------------------------------------------------------------ direction
 
 	private static bool IsRtl(char c) =>
-		c is >= '֐' and <= 'ࣿ' or >= 'יִ' and <= '﷿' or >= 'ﹰ' and <= '﻿';
+		c is >= '\u0590' and <= '\u08FF' or >= '\uFB1D' and <= '\uFDFF' or >= '\uFE70' and <= '\uFEFF';
 
 	/// <summary>
 	/// The first letter decides, so "{Red}שלום" is right to left. The website's preview only tests the first
@@ -498,20 +518,31 @@ public static class AdHudLayout
 		>= 'A' and <= 'Z' => 0.63f,
 		>= '0' and <= '9' => 0.56f,
 		>= 'a' and <= 'z' => 0.53f,
-		>= '֐' and <= '׿' => 0.57f,
-		>= '؀' and <= 'ࣿ' => 0.52f,
+		>= '\u0590' and <= '\u05FF' => 0.57f,
+		>= '\u0600' and <= '\u08FF' => 0.52f,
 		_ when char.IsSurrogate(c) => 0.55f,
-		>= '⺀' => 1.0f,
+		>= '\u2E80' => 1.0f,
 		_ => 0.62f,
 	};
 
-	private static float Width(string text, bool bold)
+	/// <summary>One glyph's advance in px, in the style it is drawn in.</summary>
+	private static float GlyphWidth(char c, AdHudPieceStyle style)
 	{
-		var em = 0f;
-		foreach (var c in text)
-			em += Em(c);
+		// A key-cap is Stratum2 Mono at 12px: every ASCII glyph the same advance. Anything else comes from the
+		// fallback font (Hebrew from Arial), so it keeps its proportional estimate.
+		if (style.Kbd != 0)
+			return (c < 128 ? KbdEm : Em(c)) * KbdFontPx;
 
-		return em * FontPx * (bold ? BoldFactor : 1f);
+		return Em(c) * FontPx * (style.Bold ? BoldFactor : 1f);
+	}
+
+	private static float Width(string text, AdHudPieceStyle style)
+	{
+		var px = 0f;
+		foreach (var c in text)
+			px += GlyphWidth(c, style);
+
+		return px;
 	}
 
 	private static readonly float SpaceWidth = Em(' ') * FontPx;
@@ -583,41 +614,56 @@ public static class AdHudLayout
 				var word = text[i..end];
 				i = end;
 
-				var bold = piece.Style.Bold;
-				var w = Width(word, bold);
+				var style = piece.Style;
 				var gap = space && lines[^1].Count > 0;
 				space = false;
 
-				if (lines[^1].Count > 0 && lineWidth + (gap ? SpaceWidth : 0f) + w > budget)
+				// Out of Labels on this line: a new piece goes on the next one, so two commands never share a key-cap
+				if (lines[^1].Count >= RunsPerLine && lines[^1][^1].Style != style)
 				{
 					NewLine();
 					gap = false;
 				}
 
-				// A word longer than a whole line is cut where it runs out of room
-				while (w > budget - lineWidth - (gap ? SpaceWidth : 0f) && word.Length > 1)
+				// A word that opens a key-cap on this line also brings the chip's padding and border; a word that
+				// goes on in the same key-cap has a mono space before it instead of the gap margin
+				bool InChip() => style.Kbd != 0 && lines[^1].Count > 0 && lines[^1][^1].Style == style;
+				float Chrome() => style.Kbd != 0 && !InChip() ? KbdChrome : 0f;
+				float Space() => !gap ? 0f : InChip() ? KbdEm * KbdFontPx : SpaceWidth;
+				var w = Width(word, style) + Chrome();
+
+				if (lines[^1].Count > 0 && lineWidth + Space() + w > budget)
 				{
-					var room = budget - lineWidth - (gap ? SpaceWidth : 0f);
+					NewLine();
+					gap = false;
+					w = Width(word, style) + Chrome();
+				}
+
+				// A word longer than a whole line is cut where it runs out of room
+				while (w > budget - lineWidth - Space() && word.Length > 1)
+				{
+					var chrome = Chrome();
+					var room = budget - lineWidth - Space() - chrome;
 					var take = 0;
 					var used = 0f;
 
 					while (take < word.Length - 1)
 					{
-						var cw = Em(word[take]) * FontPx * (bold ? BoldFactor : 1f);
+						var cw = GlyphWidth(word[take], style);
 						if (used + cw > room && take > 0)
 							break;
 						used += cw;
 						take++;
 					}
 
-					Append(word[..take], piece.Style, gap, (gap ? SpaceWidth : 0f) + used);
+					Append(word[..take], style, gap, Space() + chrome + used);
 					NewLine();
 					gap = false;
 					word = word[take..];
-					w = Width(word, bold);
+					w = Width(word, style) + Chrome();
 				}
 
-				Append(word, piece.Style, gap, (gap ? SpaceWidth : 0f) + w);
+				Append(word, style, gap, Space() + w);
 			}
 		}
 
@@ -641,7 +687,10 @@ public static class AdHudLayout
 		return lines.Select(line => (IReadOnlyList<AdHudRun>)Fit(line)).ToList();
 	}
 
-	/// <summary>A line with more styles than Labels: the last Label takes the rest, in its own style.</summary>
+	/// <summary>
+	/// A line with more styles than Labels: the last Label takes the rest, in its own style. Wrap already moves
+	/// a ninth piece to the next line, so this only guards the pool size.
+	/// </summary>
 	private static List<AdHudRun> Fit(List<Seg> line)
 	{
 		var runs = new List<AdHudRun>();
@@ -674,7 +723,7 @@ public static class AdHudLayout
 	{
 		// A font colour wins; bold text without one is white, the rest takes the strip's own colour
 		var color = style.Color != null ? Nearest(style.Color) : style.Bold ? "ffffff" : null;
-		return new AdHudRun(text, color == null ? null : "c-" + color, style.Bold, style.Italic, style.Underline, gap);
+		return new AdHudRun(text, color == null ? null : "c-" + color, style.Bold, style.Italic, style.Underline, gap, style.Kbd != 0);
 	}
 
 	/// <summary>The palette entry closest to a #rrggbb colour (redmean distance).</summary>
